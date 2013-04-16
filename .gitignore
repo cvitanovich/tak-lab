@@ -1,0 +1,3 @@
+# Git will ignore files/directories that correspond with these rules:
+
+tmp/
