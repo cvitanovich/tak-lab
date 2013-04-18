@@ -7,8 +7,9 @@ tmp=NaN*ones(1,PDR.buf_pts);
 
 %% LOAD HRTF COEFFICIENTS
 if(strcmp(PDR.HRTF_fname((end-3):end)=='.mat')
-    load_HRTF_dotMAT;
-else % using another format (e.g. for 930 or 929)
+    el=0; az=0;
+    [HRTF.left,HRTF.right] = readHRTFdotMAT(PDR.HRTF_fname,el,az);
+else % using other format (e.g. for 930 or 929)
     %read HRTF coefficients files:
     MTLreadHDR;
     MTLreadDIR;

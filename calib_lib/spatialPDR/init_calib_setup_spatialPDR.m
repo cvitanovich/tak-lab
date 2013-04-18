@@ -115,7 +115,7 @@ HRTF = make_calib_sounds;
 set(H.calib_snd_btn,'Enable','on');
 set(H.owl_id2,'Enable','on','BackgroundColor','w','String',num2str(PDR.owl_id));
 set(H.load_knowles_data_btn,'Enable','on');
-CALIB_PDR=PDR:
+CALIB_PDR=PDR;
 save ([CALIB_PDR.data_path CALIB_PDR.filename '.mat'],'CALIB_PDR');
 str{1} = 'Variables saved in: ';
 str{2} = [CALIB_PDR.data_path CALIB_PDR.filename '.mat'];

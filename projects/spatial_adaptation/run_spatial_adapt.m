@@ -90,12 +90,30 @@ else
     warndlg('???')
     return
 end
-end
 
 % HRTF SETUP:
 
-if(strcmp(PDR.HRTF_fname((end-3):end)=='.mat')
-    load_HRTF_dotMAT;
+HRTF.TestL = nan*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
+HRTF.TestR = HRTF.TestL;
+if PDR.flag_adapt
+    HRTF.AdaptL = nan*ones(1,PDR.HRTF_nlines);
+    HRTF.AdaptR = nan*ones(1,PDR.HRTF_nlines);
+else
+    HRTF.AdaptL = zeros(1,PDR.HRTF_nlines);
+    HRTF.AdaptR = HRTF.AdaptL;
+end
+
+if(strcmp(PDR.HRTF_fname((end-3):end)=='.mat')) % DOT MAT FORMAT
+    LT=zeros(1,PDR.HRTF_nlines);
+    RT=LT;
+    for i=1:PDR.TEST_nlocs
+        [LT, RT] = readHRTFdotMAT(fname,EL,AZ);
+        HRTF.TestL(:,i)=LT';
+        HRTF.TestR(:,i)=RT';
+    end
+    if PDR.flag_adapt
+        [HRTF.AdaptL(1,:), HRTF.AdaptR(1,:)] = readHRTFdotMAT(fname,EL,AZ);
+    end
 else % using another format (e.g. for 930 or 929)
     %read HRTF coefficients files:
     [HRTF] = MTLreadHDR(PDR.HRTF_directory,PDR.HRTF_fname);
@@ -106,9 +124,7 @@ else % using another format (e.g. for 930 or 929)
     % if (~strcmp(PDR.HRTF_fname(1:3),'930') & ~strcmp(PDR.HRTF_fname(1:3),'929'))
     %     PDR.HRTF_dir_matrix = sphere2double(PDR.HRTF_dir_matrix);
     % end
-    
-    HRTF.TestL = nan*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
-    HRTF.TestR = HRTF.TestL;
+
     direc = HRTF.dir_matrix; % NOTE: first row = Elevation and 2nd row = Azimuth !!!
     for i=1:PDR.TEST_nlocs
         idx{i}=find(direc(1,:)==PDR.TEST_locs(i,1) & direc(2,:)==PDR.TEST_locs(i,2));
@@ -118,16 +134,11 @@ else % using another format (e.g. for 930 or 929)
     
     if PDR.flag_adapt
         % Make FIR coefficients for Adaptor:
-        HRTF.AdaptL = nan*ones(1,PDR.HRTF_nlines);
-        HRTF.AdaptR = nan*ones(1,PDR.HRTF_nlines);
         PDR.ADAPT_coefs = makeGammaFIR(PDR.stim_Fs,PDR.ADAPT_cF,PDR.ADAPT_species);
         idxm=find(direc(1,:)==PDR.ADAPT_loc(1,1) & direc(2,:)==PDR.ADAPT_loc(1,2));
         % HRTFs for adapting stimulus:
         HRTF.AdaptL(1,:) = MTLreadCH(idxm*2-1, HRTF);
         HRTF.AdaptR(1,:) = MTLreadCH(idxm*2, HRTF);
-    else
-        HRTF.AdaptL = zeros(1,PDR.HRTF_nlines);
-        HRTF.AdaptR = HRTF.AdaptL; 
     end
 end
 
