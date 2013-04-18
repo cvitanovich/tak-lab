@@ -1,0 +1,16 @@
+Calibration scripts for Spatial PDR Experiment
+
+to get main menu:
+calib_intraural_spatialPDR.m
+
+calib knowles mics:
+calib_knowles.m
+
+make sound tokens:
+make_calib_sounds.m
+
+initialize for calibration:
+init_calib_setup_spatialPDR.m
+
+engage main calibration process:
+engage_tokeens_calib.m
