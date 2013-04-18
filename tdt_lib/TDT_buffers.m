@@ -32,14 +32,16 @@ for ch=1:length(TDT.ch_seq)
 end
 
 % ALLOT PLAY BUFFERS
-TDT.stim_buffers=NaN*ones(TDT.nPlayChannels,TDT.nBuffers(ch));
+TDT.stim_buffers=NaN*ones(TDT.nPlayChannels,TDT.nBuffers);
 start=(TDT.ch_seq(end)+1); stop=(TDT.ch_seq(end)+TDT.nBuffers);
 for ch=1:TDT.nPlayChannels
 	TDT.stim_buffers(ch,:)=start:stop;
 	start=stop+1;
-	stop=start+TDT.nBuffers;
+    for j=1:TDT.nBuffers
+        stop=stop+j;
+    end
 	for buf=1:TDT.nBuffers
-		S232('allot16',TDT.stim_buffers(buf),TDT.bufpts(buf));
+		S232('allot16',TDT.stim_buffers(ch,buf),TDT.bufpts(buf));
 	end
 end
 
@@ -74,6 +76,7 @@ if TDT.nRecChannels
 	TDT.rec_spec=N+1; S232('allot16',TDT.rec_spec,(TDT.nRecChannels+1));
 
 	% recording channels
+    N=TDT.rec_spec(end);
 	TDT.rec_ch_seq=(N+1):(TDT.nRecChannels+N+1);
 	for ch=1:length(TDT.rec_ch_seq)
 		S232('allot16',TDT.rec_ch_seq(ch),(TDT.nRecChannels+N+1));
@@ -86,25 +89,29 @@ if TDT.nRecChannels
 	for ch=1:TDT.nRecChannels
 		TDT.rec_buffers(ch,:)=start:stop;
 		start=stop+1;
-		stop=start+TDT.nBuffers;
+		stop=stop+TDT.nBuffers;
 		for buf=1:TDT.nBuffers
 			S232('allot16',TDT.rec_buffers(ch,buf),TDT.bufpts(buf));
 		end
 	end
-
-	% decimated record buffers
-	N=TDT.rec_buffers(end);
-	start=(N+1); stop=(N+TDT.nBuffers);
-	for ch=1:TDT.nRecChannels
-		TDT.dec_buffers(ch,:)=start:stop;
-		start=stop+1;
-		stop=start+TDT.nBuffers;
-		for buf=1:TDT.nBuffers
-			dec_pts = ceil(TDT.bufpts(buf) / 2^TDT.dec_factor);
-			S232('allot16',TDT.dec_buffers(ch,buf),dec_pts);
-		end
-	end
-
+    
+    N=TDT.rec_buffers(end);
+    if(TDT.dec_factor) % decimating?
+        % decimated record buffers
+        
+        start=(N+1); stop=(N+TDT.nBuffers);
+        for ch=1:TDT.nRecChannels
+            TDT.dec_buffers(ch,:)=start:stop;
+            start=stop+1;
+            stop=start+TDT.nBuffers;
+            for buf=1:TDT.nBuffers
+                dec_pts = ceil(TDT.bufpts(buf) / 2^TDT.dec_factor);
+                S232('allot16',TDT.dec_buffers(ch,buf),dec_pts);
+            end
+        end
+        N=TDT.dec_buffers(end);
+    end
+    
 	% record spec list
 	S232('dpush',(TDT.nRecChannels+1));
 	S232('value',0);
@@ -129,5 +136,5 @@ if TDT.nRecChannels
 		S232('qpop16',TDT.rec_ch_seq(ch));
 	end
 end
-TDT.n_total_buffers=TDT.dec_buffers(end);
+TDT.n_total_buffers=N;
 

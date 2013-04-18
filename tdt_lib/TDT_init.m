@@ -14,8 +14,12 @@ while ~status
         err = S232('getS2err');
         switch err
             case 0
-            case 1: h=warndlg('APOS error in initiation','warning'); uiwait(h);
-            case 2: h=warndlg('XBUS error in initiation','warning'); uiwait(h);
+            case 1
+                h=warndlg('APOS error in initiation','warning'); 
+                uiwait(h);
+            case 2
+                h=warndlg('XBUS error in initiation','warning'); u
+                iwait(h);
         end
 		err='Cannot initiate TDT. Try resetting, then click okay.';
 		choice=questdlg(err,'S232 Error','OKAY','ABORT','OKAY');

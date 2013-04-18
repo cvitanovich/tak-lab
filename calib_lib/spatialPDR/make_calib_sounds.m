@@ -2,17 +2,19 @@ function HRTF = make_calib_sounds
 %% MAKE SOUND TOKENS FOR SPATIAL PDR CALIBRATION
 global PDR
 
+HRTF.directory=PDR.HRTF_directory;
+HRTF.fname=PDR.HRTF_fname;
 % preallocate a sound buffer:
 tmp=NaN*ones(1,PDR.buf_pts);
 
 %% LOAD HRTF COEFFICIENTS
-if(strcmp(PDR.HRTF_fname((end-3):end)=='.mat')
+if(strcmp(PDR.HRTF_fname((end-3):end),'.mat'))
     el=0; az=0;
     [HRTF.left,HRTF.right] = readHRTFdotMAT(PDR.HRTF_fname,el,az);
 else % using other format (e.g. for 930 or 929)
     %read HRTF coefficients files:
-    MTLreadHDR;
-    MTLreadDIR;
+    HRTF = MTLreadHDR(HRTF);
+    HRTF = MTLreadDIR(HRTF);
     
     % THIS CONVERSION IS NOT NECESSARY WITH ANY OF THE BIRDS WE USE NOW:
     % %convert coordinates to double polar, only if not using 929 or 930 or ones
@@ -20,12 +22,13 @@ else % using other format (e.g. for 930 or 929)
     %     PDR.HRTF_dir_matrix = sphere2double(PDR.HRTF_dir_matrix);
     % end
     
-    HRTF.left = nan*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
+    HRTF.left = nan*ones(HRTF.nlines,1);
     HRTF.right = HRTF.left;
-    direc = PDR.HRTF_dir_matrix; % NOTE: first row = Elevation and 2nd row = Azimuth !!!
-    idx{i}=find(direc(1,:)==0 & direc(2,:)==0); % using frontal location for calibration
-    HRTF.left = MTLreadCH(idx{i}*2-1);
-    HRTF.right = MTLreadCH(idx{i}*2);
+    direc = HRTF.dir_matrix; % NOTE: first row = Elevation and 2nd row = Azimuth !!!
+    [r c]=find(direc(1,:)==0);
+    idx=find(direc(2,c)==0); % using frontal location for calibration
+    HRTF.left = MTLreadCH(idx*2-1, HRTF);
+    HRTF.right = MTLreadCH(idx*2, HRTF);
 end
 
 %% MAKE NARROWBAND (Octave Band: 4-8kHz) NOISE

@@ -46,8 +46,8 @@ TDT_buffers;
 
 % stimulus buffer ids
 BUF_L1=TDT.stim_buffers(1,1);
-BUF_L2=TDT.stim_buffers(2,1);
-BUF_R1=TDT.stim_buffers(1,2);
+BUF_L2=TDT.stim_buffers(1,2);
+BUF_R1=TDT.stim_buffers(2,1);
 BUF_R2=TDT.stim_buffers(2,2);
 
 

@@ -1,6 +1,6 @@
 function init_calib_setup_spatialPDR
 % initialize TDT and set up for calibrations
-global PDR H TDT HRTF
+global PDR H TDT HRTF KNOWLES
 
 % CHECK IF IT'S OKAY TO CONTINUE
 button = questdlg('You need to reset the TDT before continuing. Click OKAY when you''ve done this, or CANCEL otherwise.',...
@@ -25,7 +25,7 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'len_session',[], ...               % length of session (in minutes)
     'starttime',[], ...                 % session start time
     'stoptime', [], ...                 % session stop time
-    'code_path', 'c:\andrew\code\',...    % path to code
+    'code_path', 'c:\andrew\CORE\tak-lab\calib_lib\spatialPDR\',...    % path to code
     'data_path', 'c:\andrew\calib_data\',...     % flag indicates that AD recording (pupillometer) will be needed
     'base_atten',0,...                  % attenuation value to send to TDT (combining scale_val and atten gives a certain SPL in dB -- This needs to be calibrated!!!)
     'filename',[],...                   % file name for storing session data
@@ -38,19 +38,13 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'knowles_file',[],...               % equals 1 if calibrating Knowles voltage output
     'comments','Spatial PDR with Octave Band, BBN and Gammatones (virtual). Intraural Calibrations with Knowles mics.',...             % extra info about sounds
     'nscales',300,...                   % number of scales used for calibrating each sound (5 minutes per sound token)
-    'scales_2_try_for_cutoffs',10.^([0:.09:4.5 log10(32760)]),... % these are the scales to try to avoid nonlinearities due to speaker limitations and noise floor, etc.
+    'scales_2_try_for_cutoffs',fliplr(10.^([0:.09:4.5 log10(32760)])),... % these are the scales to try to avoid nonlinearities due to speaker limitations and noise floor, etc.
     ...
-    'HRTF_directory','C:\andrew\pdr\HRTF_lib\',...  % directory of HRTF coefficient files
+    'HRTF_directory','C:\andrew\CORE\tak-lab\HRTFs\',...  % directory of HRTF coefficient files
     'HRTF_fname','929AD_ABLequal.eq');
 
 cd(PDR.code_path);
 tmp = pwd;
-if tmp(end-3:end) == 'code'
-    PDR.data_path = [tmp(1:end-4) 'calib_data\'];
-else
-    error('CALIB:PathSetup','Something could be wrong with the path setup!')
-end
-
 
 cd(PDR.data_path);
 Prompt='Enter OWL ID # for this calibration session';
@@ -58,7 +52,8 @@ Title='Owl ID';
 Answer = inputdlg(Prompt,Title);
 PDR.owl_id=str2num(Answer{1});
 set(H.owl_id2,'String',Answer{1},'BackgroundColor','w');
-PDR.filename = ['intraural_calib_' y m d '_' num2str(PDR.owl_id) 'A'];
+c=clock;
+PDR.filename = ['intraural_calib_' num2str(c(1)) num2str(c(2)) num2str(c(3)) '_' num2str(PDR.owl_id) 'A'];
 count = double('A'+0);
 while exist ([PDR.filename '.mat'],'file');
     count = count + 1;
@@ -72,41 +67,6 @@ while exist ([PDR.filename '.mat'],'file');
 end
 set(H.intraural2,'String',[PDR.data_path PDR.filename '.mat']);
 
-
-% INITIALIZE TDT
-h=warndlg('CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???','warning');
-uiwait(h);
-
-out=TDT_init;
-if(out==-1); return; end;
-
-SRATE =  (1/PDR.stim_Fs)*10^6; % sampling rate for TDT
-
-% INITIATE TDT PARAMETERS HERE
-TDT.nPlayChannels=2;
-TDT.nBuffers=1;
-TDT.bufpts=PDR.buf_pts;
-TDT.nRecChannels=1;
-TDT.din = 1;
-TDT.Fs = PDR.stim_Fs;
-TDT.npts_total_play=PDR.buf_pts;
-TDT.dec_pts=PDR.buf_pts; % no need to decimate
-TDT.srate=1e6 / TDT.Fs;
-
-% PREPARE PD1 FOR CONVERSION:
-PD1_init;
-
-% attens (ch1 and ch2)
-TDT_attens([PDR.base_atten PDR.base_atten]);
-
-% INITIALIZE BUFFERS
-TDT_buffers;
-
-% stimulus buffer ids
-TDT.BUF_L1=TDT.stim_buffers(1,1);
-TDT.BUF_R1=TDT.stim_buffers(1,2);
-TDT.REC_L1=TDT.rec_buffers(1,1);
-TDT.REC_R1=TDT.rec_buffers(1,2);
 
 % MAKE CALIB SOUNDS
 HRTF = make_calib_sounds;
