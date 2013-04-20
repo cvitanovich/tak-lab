@@ -1,7 +1,6 @@
 %% INITIATE TDT PARAMETERS HERE
 TDT.nPlayChannels=2;
-TDT.nBuffers=2;
-TDT.bufpts=[npts npts];
+TDT.playpts={[npts npts],[npts npts]}; % two channels with two buffers each (all npts long)
 TDT.nRecChannels=2;
 TDT.dec_factor=5;
 TDT.din = 1;

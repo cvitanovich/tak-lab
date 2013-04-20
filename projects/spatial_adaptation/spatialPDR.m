@@ -4,10 +4,10 @@ global PDR TDT HRTF session
 
 %% INITIATE TDT PARAMETERS HERE
 TDT.nPlayChannels=2;
-TDT.nBuffers=2;
-TDT.bufpts=[PDR.buf_pts PDR.buf_pts]; % buffer points for each play segment
+TDT.playpts = {[PDR.buf_pts PDR.buf_pts],[PDR.buf_pts PDR.buf_pts]};
 if(PDR.record)
     TDT.nRecChannels=2;
+    TDT.recpts=TDT.playpts;
 else
     TDT.nRecChannels=0;
 end
@@ -15,13 +15,14 @@ TDT.dec_factor=PDR.decimationfactor;
 TDT.din = 1;
 TDT.Fs = PDR.stim_Fs;
 TDT.npts_total_play=PDR.npts_totalplay;
-TDT.outFN1=[PDR.filename '_REC1.vrt'];
-TDT.outFN2=[PDR.filename '_REC2.vrt'];
+TDT.outFN{1}=[PDR.filename '_REC1.vrt'];
+TDT.outFN{2}=[PDR.filename '_REC2.vrt'];
 TDT.ntrials=PDR.ntrials;
 TDT.srate=1e6 / TDT.Fs;
 TDT.display_flag=1; % flag to display trace during session
 TDT.max_signal_jitter=PDR.TEST_trial_jitter;
 TDT.disp_proc_time=1; % flag to display processing time for each buffer segment
+
 
 %% CHECK PARAMETERS
 out=check_params;
@@ -42,14 +43,13 @@ out=TDT_init;
 if(out==-1); return; end;
 
 %% INITIALIZE BUFFERS
-TDT_buffers;
-
-% stimulus buffer ids
-BUF_L1=TDT.stim_buffers(1,1);
-BUF_L2=TDT.stim_buffers(1,2);
-BUF_R1=TDT.stim_buffers(2,1);
-BUF_R2=TDT.stim_buffers(2,2);
-
+TDT=TDT_buffers(TDT);
+LEFT_PLAY = [TDT.stim_buffers{1}(1) TDT.stim_buffers{1}(2)];
+RIGHT_PLAY = [TDT.stim_buffers{2}(1) TDT.stim_buffers{2}(2)];
+REC_A = [TDT.rec_buffers{1}(1) TDT.rec_buffers{1}(2)];
+REC_B = [TDT.rec_buffers{2}(1) TDT.rec_buffers{2}(2)];
+DEC_A = [TDT.dec_buffers{1}(1) TDT.dec_buffers{1}(2)];
+DEC_B = [TDT.dec_buffers{2}(1) TDT.dec_buffers{2}(2)];
 
 %% ADAPTOR FILTERING PARAMS
 % initial state
@@ -60,7 +60,7 @@ CIRC_BUFS.adaptor=zeros(1,(length(PDR.adapt_coefs)+PDR.buf_pts));
 CIRC_BUFS.left=circ_buffer; CIRC_BUFS.right=circ_buffer;
 
 %% INITIALIZE PD1
-PD1_init;
+PD1_init(TDT);
 
 %% FILTER TEST SOUNDS WITH HRTFS
 % buffer assignments for TDT
@@ -83,7 +83,8 @@ for(j=1:PDR.TEST_nlocs)
 end
 
 %% SET ATTENS
-TDT_attens([PDR.base_atten PDR.base_atten]);
+TDT.attens=[PDR.base_atten PDR.base_atten];
+TDT_attens(TDT);
 
 %% SIGNAL RAMP BUFFER
 S232('allotf',TDT.ramp_buffer,npts);
@@ -91,18 +92,19 @@ S232('pushf',signal_ramp,npts);
 S232('qpopf',TDT.ramp_buffer);
 
 %% ZERO PLAY BUFFERS
-zero_play_buffers;
+zero_play_buffers(TDT);
 
 %% START SEQUENCED PLAY
-init_sequenced_play;
+init_sequenced_play(TDT);
 
 
 %% MAIN LOOP
 seekpos=0;
 while(seekpos < TDT.npts_total_play)
     
+    
     % WAIT FOR LAST BUFFER TO FINISH
-    while(check_play(TDT.nPlayChannels,[BUF_L1 BUF_R1])); end;
+    while(check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)])); end;
     
     tic;
     
@@ -132,9 +134,9 @@ while(seekpos < TDT.npts_total_play)
         end
     end
     % LEFT CHANNEL BUFFER
-    update_buffer(BUF_L1,adapt_left,test_left,cnt,Signalcnt,signalScale);
+    update_buffer(LEFT_PLAY(1),adapt_left,test_left,cnt,Signalcnt,signalScale);
     % RIGHT CHANNEL BUFFER
-    update_buffer(BUF_R1,adapt_right,test_right,cnt,Signalcnt,signalScale);
+    update_buffer(RIGHT_PLAY(1),adapt_right,test_right,cnt,Signalcnt,signalScale);
     % UPDATE ISI COUNTER AND SIGNAL COUNT
     if(cnt==PDR.isi_buf)
         cnt=round(TDT.max_signal_jitter.*rand);
@@ -146,12 +148,12 @@ while(seekpos < TDT.npts_total_play)
     if(PDR.record)
         % First Record Channel:
         ch=1; buf=1;
-        session.last_buffer=record_buffer(TDT.rec_buffers(ch,buf),TDT.dec_buffers(ch,buf),SignalPlayFlag,TDT.display_flag);
+        session.last_buffer=record_buffer(REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
         session.test_flag=SignalPlayFlag;
         sessionPlots2('Update Trace Plot');
         % Second Record Channel:
         ch=2; buf=1;
-        record_buffer(TDT.rec_buffers(ch,buf),TDT.dec_buffers(ch,buf),SignalPlayFlag,0);
+        record_buffer(REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
     end
     % PROCESSING TIME
     if(TDT.disp_proc_time)
@@ -167,7 +169,7 @@ while(seekpos < TDT.npts_total_play)
     if(seekpos<TDT.npts_total_play)
         
         % WAIT FOR LAST BUFFER TO FINISH
-        while(check_play(TDT.nPlayChannels,[BUF_L2 BUF_R2])); end;
+        while(check_play(TDT.nPlayChannels,[LEFT_PLAY(2) RIGHT_PLAY(2)])); end;
         
         tic;
         
@@ -197,19 +199,19 @@ while(seekpos < TDT.npts_total_play)
             end
         end
         % LEFT CHANNEL BUFFER
-        update_buffer(BUF_L2,adapt_left,test_left,cnt,Signalcnt,signalScale);
+        update_buffer(LEFT_PLAY(2),adapt_left,test_left,cnt,Signalcnt,signalScale);
         % RIGHT CHANNEL BUFFER
-        update_buffer(BUF_R2,adapt_right,test_right,cnt,Signalcnt,signalScale);
+        update_buffer(RIGHT_PLAY(2),adapt_right,test_right,cnt,Signalcnt,signalScale);
         % RECORD PDR TRACE
         if(PDR.record)
             % First Record Channel:
             ch=1; buf=2;
-            session.last_buffer=record_buffer(TDT.rec_buffers(ch,buf),TDT.dec_buffers(ch,buf),SignalPlayFlag,TDT.display_flag);
+            session.last_buffer=record_buffer(REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
             session.test_flag=SignalPlayFlag;
             sessionPlots2('Update Trace Plot');
             % Second Record Channel:
             ch=2; buf=2;
-            record_buffer(TDT.rec_buffers(ch,buf),TDT.dec_buffers(ch,buf),SignalPlayFlag,0);
+            record_buffer(REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
         end
         % UPDATE ISI COUNTER AND SIGNAL COUNT
         if(cnt==PDR.isi_buf)
@@ -221,7 +223,7 @@ while(seekpos < TDT.npts_total_play)
         % UPDATE SEEK POSITION
         seekpos = seekpos + PDR.buf_pts;
         % CHECK IF CORRECT BUFFERS ARE PLAYING
-        out=check_play(TDT.nPlayChannels,[BUF_L1 BUF_R1]);
+        out=check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)]);
         if(out==-1)
             disp(sprintf('Got %.2f percentof the way',seekpos/TDT.npts_total_play));
             disp('APcard too slow? or outFNs incorrect?');
@@ -241,7 +243,7 @@ while(seekpos < TDT.npts_total_play)
 end
 
 %% WAIT FOR LAST BUFFERS TO FINISH
-while(S232('playseg',TDT.din)==BUF_R2 || S232('playseg',TDT.din)==BUF_L2); end;
+while(S232('playseg',TDT.din)==RIGHT_PLAY(2) || S232('playseg',TDT.din)==LEFT_PLAY(2)); end;
 TDT_flush;
 
 %% SUBROUTINES
@@ -323,7 +325,11 @@ for ch=1:nPlayChannels
 end
 
 function out=check_params
+<<<<<<< HEAD
 global TDT PDR HRTF
+=======
+global PDR
+>>>>>>> origin
 out=1;
 % check decimation factor
 div=PDR.buf_pts/2^PDR.decimationfactor;

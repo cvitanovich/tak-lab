@@ -13,31 +13,24 @@ SRATE =  (1/PDR.stim_Fs)*10^6; % sampling rate for TDT
 
 % INITIATE TDT PARAMETERS HERE
 TDT.nPlayChannels=2;
-TDT.nBuffers=1;
-TDT.bufpts=PDR.buf_pts;
+TDT.playpts={PDR.buf_pts,PDR.buf_pts};
 TDT.nRecChannels=2; % one for each mic!
+TDT.recpts=TDT.playpts;
 TDT.din = 1;
 TDT.Fs = PDR.stim_Fs;
 TDT.npts_total_play=PDR.buf_pts;
-TDT.dec_pts=PDR.buf_pts; % no need to decimate
 TDT.dec_factor=0; % don't decimate
 TDT.srate=1e6 / TDT.Fs;
+TDT.buf_pts=PDR.buf_pts;
 
 % PREPARE PD1 FOR CONVERSION:
-PD1_init;
+PD1_init(TDT);
 
 % attens (ch1 and ch2)
-TDT_attens([PDR.base_atten PDR.base_atten]);
+TDT_attens(TDT);
 
 % INITIALIZE BUFFERS
-TDT_buffers;
-
-% stimulus buffer ids
-TDT.BUF_L1=TDT.stim_buffers(1);
-TDT.BUF_R1=TDT.stim_buffers(2);
-TDT.REC_L1=TDT.rec_buffers(1);
-TDT.REC_R1=TDT.rec_buffers(2);
-
+TDT=TDT_buffers(TDT);
 
 tokens = {'GTONE','OCTAVE','BBN'};
 for cnt=1:length(tokens)
@@ -114,20 +107,20 @@ drawnow;
 function avg_rms = test_scales(scales,left_snd,right_snd)
 global TDT
 TMP_LT=TDT.n_total_buffers+1;
-S232('allotf',TMP_LT,TDT.bufpts);
+S232('allotf',TMP_LT,TDT.buf_pts);
 TMP_RT=TDT.n_total_buffers+2;
-S232('allotf',TMP_RT,TDT.bufpts);
-s232('pushf',left_snd, TDT.bufpts);
+S232('allotf',TMP_RT,TDT.buf_pts);
+s232('pushf',left_snd, TDT.buf_pts);
 s232('qpopf',TMP_LT);
-s232('pushf',right_snd, TDT.bufpts);
+s232('pushf',right_snd, TDT.buf_pts);
 s232('qpopf',TMP_RT);
 for j=1:length(scales)
     S232('qpushf',TMP_LT);
     S232('scale',scales(j));
-    s232('qpop16',TDT.BUF_L1);
+    s232('qpop16',TDT.stim_buffers{1}(1));
     s232('qpushf',TMP_RT);
     S232('scale',scales(j));
-    s232('qpop16',TDT.BUF_R1);
+    s232('qpop16',TDT.stim_buffers{2}(1));
     S232('seqplay',TDT.play_spec);
     % recording voltage
     s232('seqrecord',TDT.rec_spec);
@@ -143,9 +136,9 @@ for j=1:length(scales)
     if exist('right_tmp')
         clear right_tmp;
     end
-    S232('qpush16', TDT.REC_L1);
+    S232('qpush16', TDT.rec_buffers{1}(1));
     left_tmp=S232('pop16');
-    S232('qpush16', TDT.REC_R1);
+    S232('qpush16', TDT.rec_buffers{2}(1));
     right_tmp=S232('pop16');
     % calculate rms voltage
     left_rms = sqrt(mean(left_tmp.^2));
