@@ -3,10 +3,9 @@ function [LT,RT] = readHRTFdotMAT(hrtf_dir,fname,EL,AZ)
 % grabs coefficients from an HRTF dot MAT file
 load([hrtf_dir fname]);
 % find index
-EL_list=direc(1,:);
-AZ_list=direc(2,:);
-[row,col0]=find(EL_list==EL);
-[row,col1]=find(AZ_list==AZ);
+direc
+%[row,col0]=find(dir(1,:)==EL);
+%[row,col1]=find(dir(2,:)==AZ);
 idx = intersect(col0,col1);
 
 % get left and right coefficients

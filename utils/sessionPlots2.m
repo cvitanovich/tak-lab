@@ -27,7 +27,7 @@ switch options
         session.hBox=0; % box marker handle
         session.ymax=32768; session.ymin=-32768; % for plotting trace
         
-        figure(session.hTracePlot);
+        figure(session.hFig); subplot(session.hTracePlot);
         set(gca,'XtickLabel','');
         title('PDR Trace');
         session.decpts=ceil(session.bufpts/2^session.dec_fact);
@@ -52,7 +52,7 @@ switch options
         drawnow;
 
     case 'Update Trace Plot'
-        figure(session.hTracePlot); hold on;
+        figure(session.hFig); subplot(session.hTracePlot); hold on;
         % circular buffer updatate
         session.trace_yes(1:(session.trace_pts-session.decpts))=session.trace_yes((session.decpts+1):end-2);
         session.trace_yes((end-session.decpts-1):(end-2))=session.last_buffer;

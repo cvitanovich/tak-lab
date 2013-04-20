@@ -52,8 +52,9 @@ while setup
 
 
     screen_size = get(0, 'ScreenSize');
-	session.hTrialPlot = figure;
-	set(session.hTrialPlot, 'Position', [0.1*screen_size(3) 0.1*screen_size(4) 0.7*screen_size(3) 0.7*screen_size(4)] );
+	session.hFig = figure; session.hTracePlot=subplot(2,2,1:2);
+	set(session.hFig,'renderer','OpenGL'); %use OpenGL for renderer
+    set(session.hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );
 	hold on;
 	x=0;
 	tmp = find(PDR.TEST_loc_sequence~=0);

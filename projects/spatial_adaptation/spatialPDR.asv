@@ -353,12 +353,12 @@ if(size(HRTF.AdaptR,1)~=1 && size(HRTF.AdaptR,2)~=PDR.HRTF_nlines)
     out=-1;
 end
 
-if(size(HRTF.TestL,2)~=PDR.TEST_nlocs && size(HRTF.TestL,1)~=PDR.HRTF_nlines)
+if(size(HRTF.TestL,2)~=1 && size(HRTF.TestL,2)~=PDR.HRTF_nlines)
     h = warndlg('Test HRTF arrays must be HRTF_nlines x # Test Locs');
     uiwait(h);
     out=-1;
 end
-if(size(HRTF.TestR,2)~=PDR.TEST_nlocs && size(HRTF.TestR,1)~=PDR.HRTF_nlines)
+if(size(HRTF.TestR,1)~=1 && size(HRTF.TestR,2)~=PDR.HRTF_nlines)
     h = warndlg('Test HRTF arrays must be HRTF_nlines x # Test Locs');
     uiwait(h);
     out=-1;

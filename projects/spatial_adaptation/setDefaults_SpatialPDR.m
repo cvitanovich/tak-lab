@@ -18,7 +18,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'len_session',[], ...                   % length of session (in minutes)
     'starttime',[], ...                     % session start time
     'stoptime', [], ...                     % session stop time
-    'code_path', 'C:\andrew\pdr\code\',...  % path to code
+    'code_path', 'C:\andrew\CORE\tak-lab\projects\spatial_adaptation\',...  % path to code
     'data_path', 'C:\andrew\pdr\data\', ...     % data path (normally: c:\andrew\pdr\data normally, calib: c:\andrew\pdr\calib_data)
     'base_atten',0,...                      % base attenuation for PA4
     'filename',[],...                       % filename for session data
@@ -53,8 +53,8 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_loc_sequence',[],...              % sequence of test sound locations
     ...
     ...                                     % HRTF PARAMETERS:
-    'HRTF_directory','C:\andrew\pdr\HRTF_lib\',...  % directory of HRTF coefficient files
-    'HRTF_fname','929AD_ABLequal.eq');
+    'HRTF_directory','C:\andrew\CORE\tak-lab\HRTFs\Matlab_V6\',...  % directory of HRTF coefficient files
+    'HRTF_fname','1073AC_eq_ABLequal.mat');
 
 % buffer duration (ms):
 PDR.buf_dur = 1000*PDR.buf_pts/PDR.stim_Fs;
@@ -81,12 +81,6 @@ PDR.len_session = (1/60)*(PDR.npts_totalplay/PDR.stim_Fs); % length of session i
 h=msgbox(['Session will last approximately ' num2str(PDR.len_session) ' minutes']);
 uiwait(h)
 cd(PDR.code_path);
-tmp = pwd;
-if tmp(end-3:end) == 'code'
-    PDR.data_path = [tmp(1:end-4) 'data\'];
-else
-    warndlg('Something could be wrong with the path setup!')
-end
 
 % make test sound:
 stim = makeTest(PDR.TEST_seed,PDR.TEST_dur,PDR.TEST_bandwidth(1),PDR.TEST_bandwidth(2),PDR.stim_Fs,PDR.TEST_ramp,PDR.TEST_base_rms);

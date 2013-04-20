@@ -1,4 +1,4 @@
-% NAME: run_spatial_adapt.m
+% NAME: run_spatialPDR.m
 %
 % AUTHOR: A Cvitanovich (incorporates some code by K Keller, L Whitchurch, K Hartung, and ADS Bala)
 %
@@ -21,9 +21,9 @@
 % DEPENDENCIES:
 %
 %
-% setDefaults() -- Sets up defaults for experiment!
+% setDefaults_spatialPDR() -- Sets up defaults for experiment!
 %
-% quit = setupTrialSeq() -- Sets up the trial sequence for each exp't!
+% quit = setupTrialSeq_spatialPDR() -- Sets up the trial sequence for each exp't!
 % Outputs a "quit" flag if user decides to quit.
 %
 % MTLreadHDR() -- Reads HRTF file headers (original: MTLRH.m by K Hartung 1995)
@@ -59,10 +59,10 @@ end
 
 global PDR HRTF session
 
-setDefaults; % sets default values for running a session
+setDefaults_spatialPDR; % sets default values for running a session
 
 quit = 0;
-quit = setupTrialSeq; % just sets up trial IDs so far
+quit = setupTrialSeq_spatialPDR; % just sets up trial IDs so far
 
 if quit
     return;
@@ -81,18 +81,8 @@ PDR.ADAPT_ramp(1,start-length(on_rmp):start-1)=on_rmp;
 PDR.ADAPT_ramp(start:stop) = zeros(1,stop-start+1);
 PDR.ADAPT_ramp(1,stop+1:stop+length(off_rmp))=off_rmp;
 
-if PDR.exit_flag == -1
-    disp('Starting experiment...')
-elseif PDR.exit_flag == 1
-    disp('Goodbye!')
-    return
-else
-    warndlg('???')
-    return
-end
-
 % HRTF SETUP:
-
+PDR.HRTF_nlines=255;
 HRTF.TestL = nan*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
 HRTF.TestR = HRTF.TestL;
 if PDR.flag_adapt
@@ -103,16 +93,18 @@ else
     HRTF.AdaptR = HRTF.AdaptL;
 end
 
-if(strcmp(PDR.HRTF_fname((end-3):end)=='.mat')) % DOT MAT FORMAT
+if(strcmp(PDR.HRTF_fname((end-3):end),'.mat')) % DOT MAT FORMAT
     LT=zeros(1,PDR.HRTF_nlines);
     RT=LT;
     for i=1:PDR.TEST_nlocs
-        [LT, RT] = readHRTFdotMAT(fname,EL,AZ);
+        EL=PDR.TEST_locs(i,1); AZ=PDR.TEST_locs(i,2);
+        [LT, RT] = readHRTFdotMAT(PDR.HRTF_directory,PDR.HRTF_fname,EL,AZ);
         HRTF.TestL(:,i)=LT';
         HRTF.TestR(:,i)=RT';
     end
     if PDR.flag_adapt
-        [HRTF.AdaptL(1,:), HRTF.AdaptR(1,:)] = readHRTFdotMAT(fname,EL,AZ);
+        EL=PDR.ADAPT_loc(1,1); AZ=PDR.ADAPT_loc(1,2);
+        [HRTF.AdaptL(1,:), HRTF.AdaptR(1,:)] = readHRTFdotMAT(PDR.HRTF_directory,PDR.HRTF_fname,EL,AZ);
     end
 else % using another format (e.g. for 930 or 929)
     %read HRTF coefficients files:
@@ -180,26 +172,27 @@ session.srate=(10^6)*(1/PDR.stim_Fs); % sampling period in usec
 session.stim_fs=PDR.stim_Fs;
 session.zoomval=0.4;
 screen_size = get(0, 'ScreenSize');% get scrn size
-session.hPlot=figure; whitebg(gcf,'k');
+figure(session.hFig); whitebg(gcf,'k');
 session.hTracePlot=subplot(2,2,1:2);
 session.hInfo=subplot(2,2,3); axis off;
-session.hTrialPlot=subplot(2,2,4); axis off;
-set(session.hPlot,'renderer','OpenGL'); %use OpenGL for renderer
-set(session.hPlot, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );
 txt(1) = text(.01,.9,''); 
 txt(2) = text(.01,.7,''); 
 txt(3) = text(.01,.5,''); 
 txt(4) = text(.01,.3,'');
+session.hTrialPlot=subplot(2,2,4); axis off;
+set(session.hFig,'renderer','OpenGL'); %use OpenGL for renderer
+set(session.hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );
+
 hold on;
 
 % requires session to be declared a global
 cd ..\code
 sessionPlots2('Initialize');
 hold on;
-uicontrol(session.hTracePlot,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
+uicontrol(session.hFig,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.6 0.05 0.05],...
     'Callback', 'if session.zoomval<2.1; session.zoomval=session.zoomval+0.1; end;');
-uicontrol(session.hTracePlot,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
+uicontrol(session.hFig,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.8 0.05 0.05],...
     'Callback', 'if session.zoomval>0.1; session.zoomval=session.zoomval-0.1; end;');
 % required to initialize sessionPlots:
@@ -227,12 +220,13 @@ p = [p '\'];
 if strcmp(PDR.data_path,p)
 else
     warndlg('Something could be wrong with the path setup!');
+    keyboard
     return
 end
 
 %write header information to file... saving global variables
 PDR = orderfields(PDR); % order fields by ASCII dictionary order
-save ([PDR.data_path PDR.filename '.mat'], 'passmein','PDR','HRTF');
+save ([PDR.data_path PDR.filename '.mat'], 'PDR','HRTF');
 
 % ENGAGE the main spatialPDR script:
 spatialPDR;
@@ -241,5 +235,5 @@ b=clock;
 PDR.stoptime(1:2)=b(4:5);
 %write header information to file... saving global variables
 cd(PDR.data_path)
-save ([PDR.data_path PDR.filename '.mat'], 'passmein','PDR','HRTF');
+save ([PDR.data_path PDR.filename '.mat'], 'PDR','HRTF');
 cd ..\code
