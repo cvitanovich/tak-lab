@@ -7,7 +7,7 @@ function [varargout]=record_buffer(REC_BUF,DEC_BUF,TDT,signal_flag,display_flag)
 
 S232('qpush16',REC_BUF);
 S232('decimate',TDT.dec_factor);
-if display_flag
+if(display_flag>0)
 	S232('qdup');
 	varargout=S232('popf');
 end

@@ -2,7 +2,7 @@ function init_sequenced_play(TDT)
 % initialize sequenced play for the TDT
 
 S232('seqplay',TDT.play_spec);
-if TDT.nRecChannels
+if(TDT.nRecChannels>0)
 	S232('seqrecord',TDT.rec_spec);
 end
 S232('PD1arm',TDT.din);

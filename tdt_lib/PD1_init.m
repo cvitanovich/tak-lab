@@ -23,7 +23,7 @@ for j=1:TDT.nPlayChannels
 end
 
 % record routing setup
-if TDT.nRecChannels
+if(TDT.nRecChannels>0)
 	for k=1:TDT.nRecChannels
 		CHAN = k - 1;
 		S232('PD1specOB',TDT.din, S232('OB', CHAN), S232('ADC', CHAN));

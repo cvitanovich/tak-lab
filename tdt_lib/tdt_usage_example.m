@@ -9,7 +9,7 @@ TDT.npts_total_play=???;
 
 %% INITIALIZE TDT
 out=TDT_init;
-if out<0
+if(out<0)
 	return;
 end
 

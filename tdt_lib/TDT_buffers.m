@@ -58,7 +58,7 @@ for ch=1:TDT.nPlayChannels
 		S232('allot16',TDT.stim_buffers{ch}(buf),TDT.playpts{ch}(buf));
     end
     
-    if ch<TDT.nPlayChannels
+    if(ch<TDT.nPlayChannels)
         nbuffers=length(TDT.playpts{ch+1});
         start=stop+1;
         stop=stop+nbuffers;
@@ -91,7 +91,7 @@ for ch=1:TDT.nPlayChannels
 end
 
 % RECORDING SETUP
-if(TDT.nRecChannels)
+if(TDT.nRecChannels>0)
 	% recording specification
 	N=TDT.stim_buffers{TDT.nPlayChannels}(end);
 	TDT.rec_spec=N+1; S232('allot16',TDT.rec_spec,(TDT.nRecChannels+1));
@@ -124,7 +124,7 @@ if(TDT.nRecChannels)
     
     
     
-    if(TDT.dec_factor) % decimating?
+    if(TDT.dec_factor>0) % decimating?
         % decimated record buffers
         N=TDT.rec_buffers{TDT.nRecChannels}(end);
         TDT.dec_buffers=cell(size(TDT.rec_buffers));

@@ -5,7 +5,7 @@ global PDR TDT HRTF session
 %% INITIATE TDT PARAMETERS HERE
 TDT.nPlayChannels=2;
 TDT.playpts = {[PDR.buf_pts PDR.buf_pts],[PDR.buf_pts PDR.buf_pts]};
-if(PDR.record)
+if(PDR.record>0)
     TDT.nRecChannels=2;
     TDT.recpts=TDT.playpts;
 else
@@ -38,18 +38,6 @@ signalScale=0;
 record=(TDT.nRecChannels>0);
 cnt=1; % ISI counter
 
-%% INITIALIZE TDT
-out=TDT_init;
-if(out==-1); return; end;
-
-%% INITIALIZE BUFFERS
-TDT=TDT_buffers(TDT);
-LEFT_PLAY = [TDT.stim_buffers{1}(1) TDT.stim_buffers{1}(2)];
-RIGHT_PLAY = [TDT.stim_buffers{2}(1) TDT.stim_buffers{2}(2)];
-REC_A = [TDT.rec_buffers{1}(1) TDT.rec_buffers{1}(2)];
-REC_B = [TDT.rec_buffers{2}(1) TDT.rec_buffers{2}(2)];
-DEC_A = [TDT.dec_buffers{1}(1) TDT.dec_buffers{1}(2)];
-DEC_B = [TDT.dec_buffers{2}(1) TDT.dec_buffers{2}(2)];
 
 %% ADAPTOR FILTERING PARAMS
 % initial state
@@ -59,54 +47,68 @@ CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
 % circular buffers for HRTF filtering (left/right):
 CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
 
-%% INITIALIZE PD1
-PD1_init(TDT);
-
-%% FILTER TEST SOUNDS WITH HRTFS
-% buffer assignments for TDT
-TESTLEFT=(TDT.n_total_buffers+1):(TDT.n_total_buffers+PDR.TEST_nlocs);
-TDT.n_total_buffers=TESTLEFT(end);
-TESTRIGHT=(TDT.n_total_buffers+1):(TDT.n_total_buffers+PDR.TEST_nlocs);
-TDT.n_total_buffers=TESTRIGHT(end);
-filtered_test=zeros(1,PDR.buf_pts);
-% loop through test sounds
-for(j=1:PDR.TEST_nlocs)
-    S232('allotf',TESTLEFT(j),PDR.buf_pts);
-    S232('allotf',TESTRIGHT(j),PDR.buf_pts);
-    % filter each test sound with HRTFS & Store on AP2 Card
-    filtered_test=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
-    S232('pushf',filtered_test,PDR.buf_pts);
-    S232('qpopf',TESTLEFT(j));
-    filtered_test=filter(HRTF.TestR(:,j),1,PDR.TEST_sound);
-    S232('pushf',filtered_test,PDR.buf_pts);
-    S232('qpopf',TESTRIGHT(j));
+if(1) % for debugging without the TDT
+    %% INITIALIZE TDT
+    out=TDT_init;
+    if(out==-1); return; end;
+    
+    %% INITIALIZE BUFFERS
+    TDT=TDT_buffers(TDT);
+    LEFT_PLAY = [TDT.stim_buffers{1}(1) TDT.stim_buffers{1}(2)];
+    RIGHT_PLAY = [TDT.stim_buffers{2}(1) TDT.stim_buffers{2}(2)];
+    REC_A = [TDT.rec_buffers{1}(1) TDT.rec_buffers{1}(2)];
+    REC_B = [TDT.rec_buffers{2}(1) TDT.rec_buffers{2}(2)];
+    DEC_A = [TDT.dec_buffers{1}(1) TDT.dec_buffers{1}(2)];
+    DEC_B = [TDT.dec_buffers{2}(1) TDT.dec_buffers{2}(2)];
+    
+    %% INITIALIZE PD1
+    PD1_init(TDT);
+    
+    %% FILTER TEST SOUNDS WITH HRTFS
+    % buffer assignments for TDT
+    TESTLEFT=(TDT.n_total_buffers+1):(TDT.n_total_buffers+PDR.TEST_nlocs);
+    TDT.n_total_buffers=TESTLEFT(end);
+    TESTRIGHT=(TDT.n_total_buffers+1):(TDT.n_total_buffers+PDR.TEST_nlocs);
+    TDT.n_total_buffers=TESTRIGHT(end);
+    filtered_test=zeros(1,PDR.buf_pts);
+    % loop through test sounds
+    for(j=1:PDR.TEST_nlocs)
+        S232('allotf',TESTLEFT(j),PDR.buf_pts);
+        S232('allotf',TESTRIGHT(j),PDR.buf_pts);
+        % filter each test sound with HRTFS & Store on AP2 Card
+        filtered_test=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
+        S232('pushf',filtered_test,PDR.buf_pts);
+        S232('qpopf',TESTLEFT(j));
+        filtered_test=filter(HRTF.TestR(:,j),1,PDR.TEST_sound);
+        S232('pushf',filtered_test,PDR.buf_pts);
+        S232('qpopf',TESTRIGHT(j));
+    end
+    
+    %% SET ATTENS
+    TDT.attens=[PDR.base_atten PDR.base_atten];
+    TDT_attens(TDT);
+    
+    %% SIGNAL RAMP BUFFER
+    TDT.ramp_buffer=TDT.n_total_buffers+1;
+    S232('allotf',TDT.ramp_buffer,PDR.buf_pts);
+    S232('pushf',PDR.ADAPT_ramp,PDR.buf_pts);
+    S232('qpopf',TDT.ramp_buffer);
+    TDT.n_total_buffers=TDT.n_total_buffers+1;
+    
+    %% ZERO PLAY BUFFERS
+    zero_play_buffers(TDT);
+    
+    %% START SEQUENCED PLAY
+    init_sequenced_play(TDT);
+    
+    
 end
-
-%% SET ATTENS
-TDT.attens=[PDR.base_atten PDR.base_atten];
-TDT_attens(TDT);
-
-%% SIGNAL RAMP BUFFER
-TDT.ramp_buffer=TDT.n_total_buffers+1;
-S232('allotf',TDT.ramp_buffer,PDR.buf_pts);
-S232('pushf',PDR.ADAPT_ramp,PDR.buf_pts);
-S232('qpopf',TDT.ramp_buffer);
-TDT.n_total_buffers=TDT.n_total_buffers+1;
-
-%% ZERO PLAY BUFFERS
-zero_play_buffers(TDT);
-
-%% START SEQUENCED PLAY
-init_sequenced_play(TDT);
-
 
 %% MAIN LOOP
 seekpos=0;
 while(seekpos < TDT.npts_total_play)
-    
-    
     % WAIT FOR LAST BUFFER TO FINISH
-    while(check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)])); end;
+    %while(check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)])); end;
     
     tic;
     
@@ -114,7 +116,7 @@ while(seekpos < TDT.npts_total_play)
     SignalPlayFlag=0;
     if(signalScale>0)
         readflag=1;
-    elseif(readflag)
+    elseif(readflag>0)
         readflag=0;
         SignalPlayFlag=1;
     end
@@ -123,7 +125,7 @@ while(seekpos < TDT.npts_total_play)
     % DISPLAY SESSION INFO
     disp_session_info(cntdown,seekpos);
     % PREPARE ADAPTOR
-    if(PDR.flag_adapt)
+    if(PDR.flag_adapt>0)
         [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
     end
     % TEST TRIAL SCALE
@@ -135,6 +137,7 @@ while(seekpos < TDT.npts_total_play)
             signalScale=0;
         end
     end
+    
     % LEFT CHANNEL BUFFER
     update_buffer(LEFT_PLAY(1),adapt_left,test_left,cnt,Signalcnt,signalScale);
     % RIGHT CHANNEL BUFFER
@@ -147,7 +150,7 @@ while(seekpos < TDT.npts_total_play)
         cnt=cnt+1;
     end
     % RECORD PDR TRACE
-    if(PDR.record)
+    if(record)
         % First Record Channel:
         ch=1; buf=1;
         session.last_buffer=record_buffer(REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
@@ -164,7 +167,7 @@ while(seekpos < TDT.npts_total_play)
         session.txt(4)= text(.01,.3,sprintf('Processing Time: %.3f seconds',t1),'FontSize',10);
         drawnow;
     end
-        
+    
     % UPDATE SEEK POSITION
     seekpos = seekpos + PDR.buf_pts;
     
@@ -179,7 +182,7 @@ while(seekpos < TDT.npts_total_play)
         SignalPlayFlag=0;
         if(signalScale>0)
             readflag=1;
-        elseif(readflag)
+        elseif(readflag>0)
             readflag=0;
             SignalPlayFlag=1;
         end
@@ -188,7 +191,7 @@ while(seekpos < TDT.npts_total_play)
         % DISPLAY SESSION INFO
         disp_session_info(cntdown,seekpos);
         % PREPARE ADAPTOR
-        if(PDR.flag_adapt)
+        if(PDR.flag_adapt>0)
             [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
         end
         % TEST TRIAL SCALE
@@ -205,7 +208,7 @@ while(seekpos < TDT.npts_total_play)
         % RIGHT CHANNEL BUFFER
         update_buffer(RIGHT_PLAY(2),adapt_right,test_right,cnt,Signalcnt,signalScale);
         % RECORD PDR TRACE
-        if(PDR.record)
+        if(record)
             % First Record Channel:
             ch=1; buf=2;
             session.last_buffer=record_buffer(REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
@@ -225,8 +228,7 @@ while(seekpos < TDT.npts_total_play)
         % UPDATE SEEK POSITION
         seekpos = seekpos + PDR.buf_pts;
         % CHECK IF CORRECT BUFFERS ARE PLAYING
-        out=check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)]);
-        if(out==-1)
+        if(~check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)]))
             disp(sprintf('Got %.2f percentof the way',seekpos/TDT.npts_total_play));
             disp('APcard too slow? or outFNs incorrect?');
             break;
@@ -240,7 +242,7 @@ while(seekpos < TDT.npts_total_play)
         end
     end
     
-    if(Signalcnt>TDT.ntrials); Signalcnt=0; end;
+    if(Signalcnt>TDT.ntrials); break; end;
     
 end
 
@@ -283,7 +285,7 @@ global PDR HRTF
 rand('state',adapt_state);
 new_buffer=rand(1,PDR.buf_pts);
 adapt_state=rand('state');
-keyboard
+
 [filtered_buffer, CIRC_BUFS.adaptor] = circ_fir(CIRC_BUFS.adaptor,new_buffer,PDR.ADAPT_coefs);
 % filter adaptor with left/right HRTF coefficients
 [adapt_left, CIRC_BUFS.left] = circ_fir(CIRC_BUFS.left,filtered_buffer,HRTF.AdaptL);
@@ -320,10 +322,10 @@ end
 S232('qpop16',BUF_ID);
 
 function out=check_play(nPlayChannels,BUFFERS)
-out=1;
+out=true;
 for ch=1:nPlayChannels
     if(S232('playseg',ch)~=BUFFERS(ch))
-        out=0; % error
+        out=false; % error
     end
 end
 

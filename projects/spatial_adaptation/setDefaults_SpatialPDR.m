@@ -1,5 +1,15 @@
 % SETUP DEFAULTS FOR spatialPDR EXPERIMENT
-
+% select folder location based on computer being used:
+if(ismac && strcmp(getenv('USER'),'cvitanovich'))
+    code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/spatial_adaptation/';
+    data_path='/Users/cvitanovich/Documents/MATLAB/data/';
+    hrtf_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/HRTFs/Matlab_V6/';
+else
+    code_path='C:\andrew\CORE\tak-lab\projects\spatial_adaptation\';
+    data_path='C:\andrew\pdr\data\';
+    hrtf_path='C:\andrew\CORE\tak-lab\HRTFs\Matlab_V6\';
+end
+    
 PDR = struct(...                            % MAIN PARAMETERS:
     'calib',0,...                           % flag for calibrations
     'virtual',1, ...                        % flag for virtual sound presentation
@@ -18,8 +28,8 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'len_session',[], ...                   % length of session (in minutes)
     'starttime',[], ...                     % session start time
     'stoptime', [], ...                     % session stop time
-    'code_path', 'C:\andrew\CORE\tak-lab\projects\spatial_adaptation\',...  % path to code
-    'data_path', 'C:\andrew\pdr\data\', ...     % data path (normally: c:\andrew\pdr\data normally, calib: c:\andrew\pdr\calib_data)
+    'code_path', code_path,...  % path to code
+    'data_path', data_path, ...     % data path (normally: c:\andrew\pdr\data normally, calib: c:\andrew\pdr\calib_data)
     'base_atten',0,...                      % base attenuation for PA4
     'filename',[],...                       % filename for session data
     'bird_id',929,...
@@ -53,7 +63,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_loc_sequence',[],...              % sequence of test sound locations
     ...
     ...                                     % HRTF PARAMETERS:
-    'HRTF_directory','C:\andrew\CORE\tak-lab\HRTFs\Matlab_V6\',...  % directory of HRTF coefficient files
+    'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
     'HRTF_fname','1073AC_eq_ABLequal.mat');
 
 % buffer duration (ms):
@@ -80,7 +90,6 @@ PDR.npts_totalplay = PDR.ntrials*(PDR.isi_buf+1)*PDR.buf_pts; % Calculate length
 PDR.len_session = (1/60)*(PDR.npts_totalplay/PDR.stim_Fs); % length of session in minutes
 h=msgbox(['Session will last approximately ' num2str(PDR.len_session) ' minutes']);
 uiwait(h)
-cd(PDR.code_path);
 
 % make test sound:
 stim = makeTest(PDR.TEST_seed,PDR.TEST_dur,PDR.TEST_bandwidth(1),PDR.TEST_bandwidth(2),PDR.stim_Fs,PDR.TEST_ramp,PDR.TEST_base_rms);

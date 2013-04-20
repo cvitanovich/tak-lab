@@ -28,7 +28,7 @@
 %
 % MTLreadHDR() -- Reads HRTF file headers (original: MTLRH.m by K Hartung 1995)
 %
-% MTLreadDIR() -- Reads direction matrix from HRTF files 
+% MTLreadDIR() -- Reads direction matrix from HRTF files
 % (original: MTLRDIR.m by K Hartung 1995)
 %
 % [dir1, dir2] = sphere2double(p1, p2) -- Converts spherical to double polor
@@ -85,7 +85,10 @@ PDR.ADAPT_ramp(1,stop+1:stop+length(off_rmp))=off_rmp;
 PDR.HRTF_nlines=255;
 HRTF.TestL = nan*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
 HRTF.TestR = HRTF.TestL;
-if PDR.flag_adapt
+
+if(PDR.flag_adapt>0)
+    % Make FIR coefficients for Adaptor:
+    PDR.ADAPT_coefs = makeGammaFIR(PDR.stim_Fs,PDR.ADAPT_cF,PDR.ADAPT_species);
     HRTF.AdaptL = nan*ones(1,PDR.HRTF_nlines);
     HRTF.AdaptR = nan*ones(1,PDR.HRTF_nlines);
 else
@@ -102,7 +105,7 @@ if(strcmp(PDR.HRTF_fname((end-3):end),'.mat')) % DOT MAT FORMAT
         HRTF.TestL(:,i)=LT';
         HRTF.TestR(:,i)=RT';
     end
-    if PDR.flag_adapt
+    if(PDR.flag_adapt>0)
         EL=PDR.ADAPT_loc(1,1); AZ=PDR.ADAPT_loc(1,2);
         [HRTF.AdaptL(1,:), HRTF.AdaptR(1,:)] = readHRTFdotMAT(PDR.HRTF_directory,PDR.HRTF_fname,EL,AZ);
     end
@@ -116,7 +119,7 @@ else % using another format (e.g. for 930 or 929)
     % if (~strcmp(PDR.HRTF_fname(1:3),'930') & ~strcmp(PDR.HRTF_fname(1:3),'929'))
     %     PDR.HRTF_dir_matrix = sphere2double(PDR.HRTF_dir_matrix);
     % end
-
+    
     direc = HRTF.dir_matrix; % NOTE: first row = Elevation and 2nd row = Azimuth !!!
     for i=1:PDR.TEST_nlocs
         idx{i}=find(direc(1,:)==PDR.TEST_locs(i,1) & direc(2,:)==PDR.TEST_locs(i,2));
@@ -124,9 +127,7 @@ else % using another format (e.g. for 930 or 929)
         HRTF.TestR(:,i) = MTLreadCH(idx{i}*2, HRTF);
     end
     
-    if PDR.flag_adapt
-        % Make FIR coefficients for Adaptor:
-        PDR.ADAPT_coefs = makeGammaFIR(PDR.stim_Fs,PDR.ADAPT_cF,PDR.ADAPT_species);
+    if(PDR.flag_adapt>0)
         idxm=find(direc(1,:)==PDR.ADAPT_loc(1,1) & direc(2,:)==PDR.ADAPT_loc(1,2));
         % HRTFs for adapting stimulus:
         HRTF.AdaptL(1,:) = MTLreadCH(idxm*2-1, HRTF);
@@ -135,9 +136,8 @@ else % using another format (e.g. for 930 or 929)
 end
 
 % Make sure the session gets a unique filename
-cd(PDR.data_path);
 cnt = double('a'+0);
-while exist ([PDR.filename '.mat'],'file');
+while exist ([PDR.data_path PDR.filename '.mat'],'file');
     cnt = cnt + 1;
     if cnt > 122
         disp(['Attempted to use filename: ' PDR.filename '.mat' ' but failed!']);
@@ -150,7 +150,7 @@ while exist ([PDR.filename '.mat'],'file');
 end
 
 button1 = questdlg(['Check that equipment is configured correctly.' ...
-        'Is it okay to continue with this session?'],'','YES','NO','YES');
+    'Is it okay to continue with this session?'],'','YES','NO','YES');
 
 if strcmp(button1,'NO')
     return
@@ -175,9 +175,9 @@ screen_size = get(0, 'ScreenSize');% get scrn size
 figure(session.hFig); whitebg(gcf,'k');
 session.hTracePlot=subplot(2,2,1:2);
 session.hInfo=subplot(2,2,3); axis off;
-session.txt(1) = text(.01,.9,''); 
-session.txt(2) = text(.01,.7,''); 
-session.txt(3) = text(.01,.5,''); 
+session.txt(1) = text(.01,.9,'');
+session.txt(2) = text(.01,.7,'');
+session.txt(3) = text(.01,.5,'');
 session.txt(4) = text(.01,.3,'');
 session.hTrialPlot=subplot(2,2,4); axis off;
 set(session.hFig,'renderer','OpenGL'); %use OpenGL for renderer
@@ -186,7 +186,6 @@ set(session.hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*scree
 hold on;
 
 % requires session to be declared a global
-cd ..\code
 sessionPlots2('Initialize');
 hold on;
 uicontrol(session.hFig,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
@@ -195,34 +194,25 @@ uicontrol(session.hFig,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',.
 uicontrol(session.hFig,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.8 0.05 0.05],...
     'Callback', 'if session.zoomval>0.1; session.zoomval=session.zoomval-0.1; end;');
+
 % required to initialize sessionPlots:
 % structure with these parameters:
 % hab_xes, hab_yes, trial_xes, trial_yes
 % ntrials, min_yes, max_yes
 % bufpts, decpts, isi, trials_to_show
 
-%*********************************************************************
-%*********************************************************************
+% *********************************************************************
+% *********************************************************************
 %       Start Main Loop Here
-%*********************************************************************
-%*********************************************************************
-%from here on, this will be run in a .dll and you can't jump out.
+% *********************************************************************
+% *********************************************************************
+% from here on, this will be run in a .dll and you can't jump out.
 
 lengthOFtrials=(round(PDR.npts_totalplay/PDR.stim_Fs/60*10))/10;  %should be in approximate minutes
 b=clock;
 PDR.starttime(1:2)=b(4:5);
-disp(['Now the program will just have to run its course.'])
+disp(['Now the program will just have to run its course.']);
 disp(['It should be done in ~' num2str(lengthOFtrials) ' min from now (' num2str(b(4:5)) ')']);
-
-cd(PDR.data_path)
-p = pwd;
-p = [p '\'];
-if strcmp(PDR.data_path,p)
-else
-    warndlg('Something could be wrong with the path setup!');
-    
-    return
-end
 
 %write header information to file... saving global variables
 PDR = orderfields(PDR); % order fields by ASCII dictionary order
@@ -234,6 +224,4 @@ spatialPDR;
 b=clock;
 PDR.stoptime(1:2)=b(4:5);
 %write header information to file... saving global variables
-cd(PDR.data_path)
 save ([PDR.data_path PDR.filename '.mat'], 'PDR','HRTF');
-cd ..\code
