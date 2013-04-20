@@ -1,6 +1,5 @@
-function init_sequenced_play
+function init_sequenced_play(TDT)
 % initialize sequenced play for the TDT
-global TDT
 
 S232('seqplay',TDT.play_spec);
 if TDT.nRecChannels

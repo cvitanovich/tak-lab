@@ -57,7 +57,7 @@ else
     clear all; close all;
 end
 
-global PDR HRTF session
+global PDR HRTF TDT session
 
 setDefaults; % sets default values for running a session
 
@@ -241,5 +241,5 @@ b=clock;
 PDR.stoptime(1:2)=b(4:5);
 %write header information to file... saving global variables
 cd(PDR.data_path)
-save ([PDR.data_path PDR.filename '.mat'], 'passmein','PDR','HRTF');
+save ([PDR.data_path PDR.filename '.mat'], 'passmein','PDR','HRTF','TDT');
 cd ..\code

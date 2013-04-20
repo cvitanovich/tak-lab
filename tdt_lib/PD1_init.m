@@ -1,11 +1,10 @@
-function PD1_init
+function PD1_init(TDT)
 % generic function to prepare PD1 for single channel or multi-channel play
 % TDT.din -- TDT device id no.
 % TDT.Fs -- sampling rate in Hz
 % TDT.npts_total_play -- total play its (all buffers)
 % TDT.nPlayChannels -- number of channels to use
 % TDT.nRecChannels -- no. of recording channels
-global TDT
 
 SRATE = 1e6 / TDT.Fs;
 S232('PD1clear',TDT.din);
@@ -16,7 +15,7 @@ S232('dropall');
 S232('PD1clrsched',TDT.din);
 S232('PD1nstrms',TDT.din,TDT.nPlayChannels,TDT.nRecChannels);
 
-% playback routing setup
+% simple playback routing setup
 for j=1:TDT.nPlayChannels
 	CHAN = j - 1;
 	S232('PD1addsimp', TDT.din, S232('DSPout', CHAN), S232('DAC', CHAN));

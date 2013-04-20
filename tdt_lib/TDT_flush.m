@@ -1,6 +1,5 @@
-function TDT_flush
+function TDT_flush(TDT)
 % commands to stopTDT and flush all it's settings
-global TDT
 
 for ch=1:TDT.nPlayChannels
 	S232('PA4mute',ch);
