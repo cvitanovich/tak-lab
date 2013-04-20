@@ -98,7 +98,7 @@ if(TDT.nRecChannels)
 
 	% recording channels
     N=N+2;
-	TDT.rec_ch_seq=N:(TDT.nRecChannels+N+1);
+	TDT.rec_ch_seq=N:(N + TDT.nRecChannels - 1);
 	for ch=1:length(TDT.rec_ch_seq)
 		S232('allot16',TDT.rec_ch_seq(ch),(TDT.nRecChannels+N+1));
 	end
@@ -142,7 +142,7 @@ if(TDT.nRecChannels)
                 stop=stop+nbuffers;
             end
         end
-        N=TDT.dec_buffers(end);
+        N=TDT.dec_buffers{TDT.nRecChannels}(end);
     end
     
 	% record spec list
@@ -170,5 +170,6 @@ if(TDT.nRecChannels)
 		S232('qpop16',TDT.rec_ch_seq(ch));
 	end
 end
+
 TDT.n_total_buffers=N;
 

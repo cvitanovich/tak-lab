@@ -55,9 +55,9 @@ DEC_B = [TDT.dec_buffers{2}(1) TDT.dec_buffers{2}(2)];
 % initial state
 adapt_state = PDR.ADAPT_seed;
 % circular buffer for continuous filtered adaptor:
-CIRC_BUFS.adaptor=zeros(1,(length(PDR.adapt_coefs)+PDR.buf_pts));
+CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
 % circular buffers for HRTF filtering (left/right):
-CIRC_BUFS.left=circ_buffer; CIRC_BUFS.right=circ_buffer;
+CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
 
 %% INITIALIZE PD1
 PD1_init(TDT);
@@ -71,8 +71,8 @@ TDT.n_total_buffers=TESTRIGHT(end);
 filtered_test=zeros(1,PDR.buf_pts);
 % loop through test sounds
 for(j=1:PDR.TEST_nlocs)
-    S232('allotf',PDR.buf_pts);
-    S232('allotf',PDR.buf_pts);
+    S232('allotf',TESTLEFT(j),PDR.buf_pts);
+    S232('allotf',TESTRIGHT(j),PDR.buf_pts);
     % filter each test sound with HRTFS & Store on AP2 Card
     filtered_test=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
     S232('pushf',filtered_test,PDR.buf_pts);
@@ -87,9 +87,11 @@ TDT.attens=[PDR.base_atten PDR.base_atten];
 TDT_attens(TDT);
 
 %% SIGNAL RAMP BUFFER
-S232('allotf',TDT.ramp_buffer,npts);
-S232('pushf',signal_ramp,npts);
+TDT.ramp_buffer=TDT.n_total_buffers+1;
+S232('allotf',TDT.ramp_buffer,PDR.buf_pts);
+S232('pushf',PDR.ADAPT_ramp,PDR.buf_pts);
 S232('qpopf',TDT.ramp_buffer);
+TDT.n_total_buffers=TDT.n_total_buffers+1;
 
 %% ZERO PLAY BUFFERS
 zero_play_buffers(TDT);
@@ -122,7 +124,7 @@ while(seekpos < TDT.npts_total_play)
     disp_session_info(cntdown,seekpos);
     % PREPARE ADAPTOR
     if(PDR.flag_adapt)
-        [adapt_state, adapt_left, adapt_right]=adaptor_filter(adapt_state);
+        [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
     end
     % TEST TRIAL SCALE
     if(cnt==PDR.isi_buf)
@@ -187,7 +189,7 @@ while(seekpos < TDT.npts_total_play)
         disp_session_info(cntdown,seekpos);
         % PREPARE ADAPTOR
         if(PDR.flag_adapt)
-            [adapt_state, adapt_left, adapt_right]=adaptor_filter(adapt_state);
+            [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
         end
         % TEST TRIAL SCALE
         if(cnt==PDR.isi_buf)
@@ -250,17 +252,17 @@ TDT_flush;
 
 function disp_session_info(cntdown,seekpos)
 global TDT session
-figure(session.hPlot);
-subplot(session.hSessionInfo);
+figure(session.hFig);
+subplot(session.hInfo);
 delete(session.txt(1)); delete(session.txt(2)); delete(session.txt(3)); axis off;
 elapsed_time=seekpos*(TDT.srate/1e6);
 min=floor(elapsed_time/60); sec=elapsed_time-(60*min);
-session.txt(1)=session.txt(.01,.9,sprintf('ELAPSED TIME:    %i minutes   %.2f seconds',min,sec),'FontSize',12);
-rem_time = TDT.npts_total_play*(SRATE/1E6) - elapsed_time;
+session.txt(1)=text(.01,.9,sprintf('ELAPSED TIME:    %i minutes   %.2f seconds',min,sec),'FontSize',12);
+rem_time = TDT.npts_total_play*(TDT.srate/1E6) - elapsed_time;
 min=floor(rem_time/60); sec=rem_time-(60*min);
-session.txt(2)=session.txt(.01,.7,sprintf('REMAINING TIME:  %i minutes   %.2f seconds',min,sec),'FontSize',12);
+session.txt(2)=text(.01,.7,sprintf('REMAINING TIME:  %i minutes   %.2f seconds',min,sec),'FontSize',12);
 min=floor(cntdown/60); sec=cntdown-(60*min);
-session.txt(3)=session.txt(.01,.5,sprintf('NEXT TEST TRIAL: %i minutes   %.2f seconds',min,sec),'FontSize',12);
+session.txt(3)=text(.01,.5,sprintf('NEXT TEST TRIAL: %i minutes   %.2f seconds',min,sec),'FontSize',12);
 drawnow;
 
 function cntdown=update_countdown(cnt,Signalcnt)
@@ -275,16 +277,17 @@ if(PDR.TEST_scale_sequence(Signalcnt)==0)
     end
 end
 
-function [adapt_state, adapt_left, adapt_right]=adaptor_filter(adapt_state)
+function [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS)
 global PDR HRTF
 % get new set of pseudorandomly generated numbers and run through a FIR filter
 rand('state',adapt_state);
 new_buffer=rand(1,PDR.buf_pts);
 adapt_state=rand('state');
-[filtered_buffer, circ_buffer] = circ_fir(circ_buffer,new_buffer,PDR.ADAPT_coefs);
+keyboard
+[filtered_buffer, CIRC_BUFS.adaptor] = circ_fir(CIRC_BUFS.adaptor,new_buffer,PDR.ADAPT_coefs);
 % filter adaptor with left/right HRTF coefficients
-[adapt_left, left_buffer] = circ_fir(left_buffer,filtered_buffer,HRTF.AdaptL);
-[adapt_right, right_buffer] = circ_fir(right_buffer,filtered_buffer,HRTF.AdaptR);
+[adapt_left, CIRC_BUFS.left] = circ_fir(CIRC_BUFS.left,filtered_buffer,HRTF.AdaptL);
+[adapt_right, CIRC_BUFS.right] = circ_fir(CIRC_BUFS.right,filtered_buffer,HRTF.AdaptR);
 
 function update_buffer(BUF_ID,adaptor,test,cnt,Signalcnt,signalScale)
 global PDR session
@@ -325,11 +328,7 @@ for ch=1:nPlayChannels
 end
 
 function out=check_params
-<<<<<<< HEAD
 global TDT PDR HRTF
-=======
-global PDR
->>>>>>> origin
 out=1;
 % check decimation factor
 div=PDR.buf_pts/2^PDR.decimationfactor;
@@ -369,7 +368,7 @@ if(size(HRTF.TestR,2)~=PDR.TEST_nlocs && size(HRTF.TestR,1)~=PDR.HRTF_nlines)
     uiwait(h);
     out=-1;
 end
-keyboard
+
 % check ramp vector
 if(size(PDR.ADAPT_ramp,1)~=1 && size(PDR.ADAPT_ramp,2)~=PDR.buf_pts)
     h = warndlg('Ramp must be 1 x buf_pts');

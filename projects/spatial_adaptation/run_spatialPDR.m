@@ -175,10 +175,10 @@ screen_size = get(0, 'ScreenSize');% get scrn size
 figure(session.hFig); whitebg(gcf,'k');
 session.hTracePlot=subplot(2,2,1:2);
 session.hInfo=subplot(2,2,3); axis off;
-txt(1) = text(.01,.9,''); 
-txt(2) = text(.01,.7,''); 
-txt(3) = text(.01,.5,''); 
-txt(4) = text(.01,.3,'');
+session.txt(1) = text(.01,.9,''); 
+session.txt(2) = text(.01,.7,''); 
+session.txt(3) = text(.01,.5,''); 
+session.txt(4) = text(.01,.3,'');
 session.hTrialPlot=subplot(2,2,4); axis off;
 set(session.hFig,'renderer','OpenGL'); %use OpenGL for renderer
 set(session.hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );
@@ -220,7 +220,7 @@ p = [p '\'];
 if strcmp(PDR.data_path,p)
 else
     warndlg('Something could be wrong with the path setup!');
-    keyboard
+    
     return
 end
 
