@@ -103,4 +103,3 @@ HRTF.comment2=comment2';
 
 HRTF.filetype = filetype;
 fclose(fid);
-return;

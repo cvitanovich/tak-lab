@@ -1,5 +1,5 @@
 function ramped_snd = rampMySound(snd,ramplen,Fs)
-ramplen = ramplen*Fs;
+ramplen = (ramplen/1000)*Fs;
 len = length(snd);
 ramp = 0:(1/ramplen):1;
 flip_ramp = fliplr(ramp);

@@ -6,9 +6,6 @@ global PDR KNOWLES TDT
 h=warndlg('CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???','warning');
 uiwait(h);
 
-out=TDT_init;
-if(out==-1); return; end;
-
 SRATE =  (1/PDR.stim_Fs)*10^6; % sampling rate for TDT
 
 % INITIATE TDT PARAMETERS HERE
@@ -22,6 +19,10 @@ TDT.npts_total_play=PDR.buf_pts;
 TDT.dec_factor=0; % don't decimate
 TDT.srate=1e6 / TDT.Fs;
 TDT.buf_pts=PDR.buf_pts;
+
+% TDT INIT
+out=TDT_init;
+if(out==-1); return; end;
 
 % PREPARE PD1 FOR CONVERSION:
 PD1_init(TDT);

@@ -6,11 +6,18 @@ KNOWLES = struct(...
     'Fs',30000,...
     'duration',5,...
     'ramp',5,...
-    'data_path','.',...
+    'data_path','',...
     'filename',[]);
 
+if(ismac && strcmp(getenv('USER'),'cvitanovich'))
+    data_path='/Users/cvitanovich/Documents/MATLAB/data/';
+else
+    data_path='C:\andrew\pdr\data\';
+end
+
+KNOWLES.data_path=data_path;
+
 % setup filename
-cd(KNOWLES.data_path);
 c=clock;
 KNOWLES.filename=['knowles_calib_' num2str(c(1)) '_' num2str(c(2)) '_' num2str(c(3)) '_A'];
 count = double('A'+0);

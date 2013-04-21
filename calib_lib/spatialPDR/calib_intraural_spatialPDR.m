@@ -147,8 +147,7 @@ PDR.owl_id = str2num(get(H.owl_id2,'String'));
 % LOAD PREVIOUSLY GATHERED KNOWLES CALIBRATION DATA
 function load_knowles(hObject,eventdata)
 global KNOWLES PDR H
-cd(PDR.data_path);
-uiopen('knowles*.mat');
+uiopen([KNOWLES.data_path 'knowles*.mat']);
 PDR.knowles_file = [KNOWLES.data_path KNOWLES.filename];
 set(H.knowles2,'String',[KNOWLES.data_path KNOWLES.filename '.mat']);
 
