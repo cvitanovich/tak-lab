@@ -16,7 +16,6 @@ else % using other format (e.g. for 930 or 929)
     
     HRTF = MTLreadHDR(HRTF);
     HRTF = MTLreadDIR(HRTF);
-    keyboard
     % THIS CONVERSION IS NOT NECESSARY WITH ANY OF THE BIRDS WE USE NOW:
     % %convert coordinates to double polar, only if not using 929 or 930 or ones
     % if (~strcmp(PDR.HRTF_fname(1:3),'930') & ~strcmp(PDR.HRTF_fname(1:3),'929'))
