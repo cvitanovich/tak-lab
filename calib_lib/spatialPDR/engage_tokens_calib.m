@@ -5,7 +5,6 @@ global PDR KNOWLES TDT
 % INITIALIZE TDT
 h=warndlg('CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???','warning');
 uiwait(h);
-close(h)
 
 SRATE =  (1/PDR.stim_Fs)*10^6; % sampling rate for TDT
 
@@ -36,7 +35,7 @@ TDT_attens(TDT);
 TDT=TDT_buffers(TDT);
 
 
-tokens = {'OCTAVE','BBN','GTONE'};
+tokens = {'GTONE','OCTAVE','BBN'};
 for cnt=1:length(tokens)
     eval(['left_snd = PDR.' tokens{cnt} '_left;']);
     eval(['right_snd = PDR.' tokens{cnt} '_right;']);
@@ -121,9 +120,11 @@ s232('qpopf',TMP_RT);
 for j=1:length(scales)
     S232('qpushf',TMP_LT);
     S232('scale',scales(j));
+    S232('scale',50);
     s232('qpop16',TDT.stim_buffers{1}(1));
     s232('qpushf',TMP_RT);
     S232('scale',scales(j));
+    s232('scale',50);
     s232('qpop16',TDT.stim_buffers{2}(1));
     S232('seqplay',TDT.play_spec);
     % recording voltage
