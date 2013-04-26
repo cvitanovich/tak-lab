@@ -119,13 +119,14 @@ if(TDT.nRecChannels>0)
             stop=stop+nbuffers;
         end
     end
-    N=TDT.rec_buffers{TDT.nRecChannels}(end);
+    
     
     
     
     
     if(TDT.dec_factor>0) % decimating?
         % decimated record buffers
+        N=TDT.rec_buffers{TDT.nRecChannels}(end);
         TDT.dec_buffers=cell(size(TDT.rec_buffers));
         nbuffers=length(TDT.recpts{1});
         start=(N+1); stop=(N+nbuffers);

@@ -5,7 +5,6 @@ global PDR KNOWLES TDT
 % INITIALIZE TDT
 h=warndlg('CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???','warning');
 uiwait(h);
-close(h)
 
 SRATE =  (1/PDR.stim_Fs)*10^6; % sampling rate for TDT
 
@@ -20,7 +19,6 @@ TDT.npts_total_play=PDR.buf_pts;
 TDT.dec_factor=0; % don't decimate
 TDT.srate=1e6 / TDT.Fs;
 TDT.buf_pts=PDR.buf_pts;
-TDT.attens=[0 0];
 
 % TDT INIT
 out=TDT_init;
@@ -35,8 +33,7 @@ TDT_attens(TDT);
 % INITIALIZE BUFFERS
 TDT=TDT_buffers(TDT);
 
-
-tokens = {'OCTAVE','BBN','GTONE'};
+tokens = {'GTONE','OCTAVE','BBN'};
 for cnt=1:length(tokens)
     eval(['left_snd = PDR.' tokens{cnt} '_left;']);
     eval(['right_snd = PDR.' tokens{cnt} '_right;']);

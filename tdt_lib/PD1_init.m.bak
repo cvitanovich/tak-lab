@@ -10,7 +10,7 @@ SRATE = 1e6 / TDT.Fs;
 S232('PD1clear',TDT.din);
 S232('PD1srate',TDT.din,SRATE);
 S232('PD1npts',TDT.din,TDT.npts_total_play);
-%S232('PD1resetDSP',TDT.din,hex2dec('FFF'));
+S232('PD1resetDSP',TDT.din,hex2dec('FFF'));
 S232('dropall');
 S232('PD1clrsched',TDT.din);
 S232('PD1nstrms',TDT.din,TDT.nPlayChannels,TDT.nRecChannels);
@@ -18,8 +18,8 @@ S232('PD1nstrms',TDT.din,TDT.nPlayChannels,TDT.nRecChannels);
 % simple playback routing setup
 for j=1:TDT.nPlayChannels
 	CHAN = j - 1;
-	S232('PD1addsimp', TDT.din, S232('IREG', CHAN), S232('DAC', CHAN));
-	S232('PD1specIB', TDT.din, S232('IB', CHAN), S232('IREG', CHAN));
+	S232('PD1addsimp', TDT.din, S232('DSPout', CHAN), S232('DAC', CHAN));
+	S232('PD1specIB', TDT.din, S232('IB', CHAN), S232('DSPin', CHAN));
 end
 
 % record routing setup

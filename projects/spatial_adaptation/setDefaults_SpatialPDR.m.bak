@@ -1,6 +1,6 @@
 % SETUP DEFAULTS FOR spatialPDR EXPERIMENT
 % select folder location based on computer being used:
-if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
+if(ismac && strcmp(getenv('USER'),'cvitanovich'))
     code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/spatial_adaptation/';
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
     hrtf_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/HRTFs/Matlab_V6/';

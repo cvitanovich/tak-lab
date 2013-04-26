@@ -15,7 +15,7 @@ end
 % but for all the scripts to work it needs to be called PDR for now!
 
 % select folder location based on computer being used:
-if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
+if(ismac && strcmp(getenv('USER'),'cvitanovich'))
     code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/calib_lib/spatialPDR/';
     data_path='/Users/cvitanovich/Documents/MATLAB/data/calib/';
     hrtf_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/HRTFs/Matlab_V6/';
@@ -52,7 +52,7 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'scales_2_try_for_cutoffs',fliplr(10.^([0:.09:4.5 log10(32760)])),... % these are the scales to try to avoid nonlinearities due to speaker limitations and noise floor, etc.
     ...
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
-    'HRTF_fname','1073AC_eq_ABLequal_norm.mat');
+    'HRTF_fname','1073AC_eq_ABLequal.mat');
 
 Prompt='Enter OWL ID # for this calibration session';
 Title='Owl ID';
