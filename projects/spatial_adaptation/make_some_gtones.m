@@ -5,9 +5,9 @@ dur=4; % 4 second sound
 target_rms=.25;
 hWait=waitbar(0);
 s=[];
-nStates=50;
+nStates=10;
 good_states=[];
-j=0; cnt=0;
+j=1; cnt=0;
 ramplen=5;
 [coefs]=makeGammaFIR(Fs,cF,species);
 while j < nStates
@@ -17,7 +17,7 @@ while j < nStates
     snd=rand(1,dur*Fs);
     snd=filtfilt(coefs,1,snd);
     snd=snd./max(abs(snd));
-    if(std(snd)<=target_rms)
+    if(std(snd)>=target_rms)
         j=j+1;
         rms=std(snd);
         snd=(target_rms/rms).*snd;

@@ -33,40 +33,89 @@ end
 
 %% MAKE NARROWBAND (Octave Band: 4-8kHz) NOISE
 bandwidth=[4000 8000];
-tmp = makeTest(PDR.TEST_seed,1000,bandwidth(1),bandwidth(2),PDR.stim_Fs,0,PDR.TEST_base_rms);
-tmp = (0.999)*tmp ./ (max(abs(tmp))); % NORMALIZE
-% Convolve with HRTF (ABL Equalized) for frontal location (El,Az)=(0,0)
-PDR.OCTAVE_left = filtfilt(HRTF.left,1,tmp);
-PDR.OCTAVE_right = filtfilt(HRTF.right,1,tmp);
+ok=0; cnt=0;
+while(~ok)
+    PDR.OCTAVE_seed=PDR.TEST_seed+cnt;
+    tmp= makeTest(PDR.OCTAVE_seed,1000,bandwidth(1),bandwidth(2),PDR.stim_Fs,0);
+    tmp = (0.999)*tmp ./ (max(abs(tmp))); % NORMALIZE
+    % Convolve with HRTF (ABL Equalized) for frontal location (El,Az)=(0,0)
+    PDR.OCTAVE_left = filtfilt(HRTF.left,1,tmp);
+    PDR.OCTAVE_right = filtfilt(HRTF.right,1,tmp);
+    % NORMALIZE TO +/- 1
+    mx=max(abs([PDR.OCTAVE_left PDR.OCTAVE_right]));
+    PDR.OCTAVE_left=(0.999)*PDR.OCTAVE_left./mx;
+    PDR.OCTAVE_right=(0.999)*PDR.OCTAVE_right./mx;
+    rms_left = sqrt(mean(PDR.OCTAVE_left.^2));
+    rms_right = sqrt(mean(PDR.OCTAVE_right.^2));
+    rms_avg = (rms_left+rms_right)/2
+    
+    PDR.OCTAVE_left=(PDR.TEST_target_rms/rms_avg).*PDR.OCTAVE_left; % sets rms ABL to target rms
+    PDR.OCTAVE_right=(PDR.TEST_target_rms/rms_avg).*PDR.OCTAVE_right; % sets rms ABL to target rms
+    if(max(abs([PDR.OCTAVE_left PDR.OCTAVE_right]))<1)
+        ok=1; % avoids CLIPPING!
+        break
+    end
+    cnt=cnt+1;
+end
 PDR.OCTAVE_left = rampMySound(PDR.OCTAVE_left,PDR.TEST_ramp,PDR.stim_Fs);
 PDR.OCTAVE_right = rampMySound(PDR.OCTAVE_right,PDR.TEST_ramp,PDR.stim_Fs);
-rms_left= sqrt(mean(PDR.OCTAVE_left.^2));
-rms_right= sqrt(mean(PDR.OCTAVE_right.^2));
-PDR.OCTAVE_avgrms = (rms_left+rms_right)/2;
 
 %% MAKE BROADBAND NOISE (2-11kHz)
 bandwidth=[2000 11000];
-tmp= makeTest(PDR.TEST_seed,1000,bandwidth(1),bandwidth(2),PDR.stim_Fs,0,PDR.TEST_base_rms);
-tmp = (0.999)*tmp ./ (max(abs(tmp))); % NORMALIZE
-% Convolve with HRTF (ABL Equalized) for frontal location (El,Az)=(0,0)
-PDR.BBN_left = filtfilt(HRTF.left,1,tmp);
-PDR.BBN_right = filtfilt(HRTF.right,1,tmp);
+ok=0; cnt=0;
+while(~ok)
+    PDR.BBN_seed=PDR.TEST_seed+cnt;
+    tmp= makeTest(PDR.BBN_seed,1000,bandwidth(1),bandwidth(2),PDR.stim_Fs,0);
+    tmp = (0.999)*tmp ./ (max(abs(tmp))); % NORMALIZE
+    % Convolve with HRTF (ABL Equalized) for frontal location (El,Az)=(0,0)
+    PDR.BBN_left = filtfilt(HRTF.left,1,tmp);
+    PDR.BBN_right = filtfilt(HRTF.right,1,tmp);
+    % NORMALIZE TO +/- 1
+    mx=max(abs([PDR.BBN_left PDR.BBN_right]));
+    PDR.BBN_left=(0.999)*PDR.BBN_left./mx;
+    PDR.BBN_right=(0.999)*PDR.BBN_right./mx;
+    rms_left= sqrt(mean(PDR.BBN_left.^2));
+    rms_right= sqrt(mean(PDR.BBN_right.^2));
+    rms_avg = (rms_left+rms_right)/2
+    PDR.BBN_left=(PDR.TEST_target_rms/rms_avg).*PDR.BBN_left; % sets rms ABL to target rms
+    PDR.BBN_right=(PDR.TEST_target_rms/rms_avg).*PDR.BBN_right; % sets rms ABL to target rms
+    if(max(abs([PDR.BBN_left PDR.BBN_right]))<1)
+        ok=1; % avoids CLIPPING!
+        break
+    end
+    cnt=cnt+1;
+end
 PDR.BBN_left = rampMySound(PDR.BBN_left,PDR.TEST_ramp,PDR.stim_Fs);
 PDR.BBN_right = rampMySound(PDR.BBN_right,PDR.TEST_ramp,PDR.stim_Fs);
-rms_left= sqrt(mean(PDR.BBN_left.^2));
-rms_right= sqrt(mean(PDR.BBN_right.^2));
-PDR.BBN_avgrms = (rms_left+rms_right)/2;
 
 %% MAKE GAMMATONE (cF=6kHz)
 PDR.GTONE_cF = 6000; PDR.GTONE_species = 'owl';
 PDR.GTONE_coefs = makeGammaFIR(PDR.stim_Fs,PDR.GTONE_cF,PDR.GTONE_species);
-tmp=rand(1,PDR.buf_pts);
-tmp=filtfilt(PDR.GTONE_coefs,1,tmp);
-% Convolve with HRTF (ABL Equalized) for frontal location (El,Az)=(0,0)
-PDR.GTONE_left = filtfilt(HRTF.left,1,tmp);
-PDR.GTONE_right = filtfilt(HRTF.right,1,tmp);
+ok=0; cnt=0;
+while(~ok)
+    PDR.GTONE_seed=PDR.TEST_seed+cnt;
+    rand('state',PDR.GTONE_seed);
+    tmp=rand(1,PDR.buf_pts);
+    tmp=filtfilt(PDR.GTONE_coefs,1,tmp);
+    tmp = (0.999)*tmp ./ (max(abs(tmp))); % NORMALIZE
+    % Convolve with HRTFs (ABL Equalized) for frontal location (El,Az)=(0,0)
+    PDR.GTONE_left = filtfilt(HRTF.left,1,tmp);
+    PDR.GTONE_right = filtfilt(HRTF.right,1,tmp);
+    % NORMALIZE TO +/- 1
+    mx=max(abs([PDR.BBN_left PDR.BBN_right]));
+    PDR.BBN_left=(0.999)*PDR.BBN_left./mx;
+    PDR.BBN_right=(0.999)*PDR.BBN_right./mx;
+    rms_left= sqrt(mean(PDR.GTONE_left.^2));
+    rms_right= sqrt(mean(PDR.GTONE_right.^2));
+    rms_avg = (rms_left+rms_right)/2
+    PDR.GTONE_left=(PDR.TEST_target_rms/rms_avg).*PDR.GTONE_left; % sets rms ABL to target rms
+    PDR.GTONE_right=(PDR.TEST_target_rms/rms_avg).*PDR.GTONE_right; % sets rms ABL to target rms
+    if(max(abs([PDR.GTONE_left PDR.GTONE_right]))<1)
+        ok=1; % avoids CLIPPING!
+        break
+    end
+    cnt=cnt+1;
+end
 PDR.GTONE_left = rampMySound(PDR.GTONE_left,PDR.TEST_ramp,PDR.stim_Fs);
 PDR.GTONE_right = rampMySound(PDR.GTONE_right,PDR.TEST_ramp,PDR.stim_Fs);
-rms_left= sqrt(mean(PDR.GTONE_left.^2));
-rms_right= sqrt(mean(PDR.GTONE_right.^2));
-PDR.GTONE_avgrms = (rms_left+rms_right)/2;
+keyboard

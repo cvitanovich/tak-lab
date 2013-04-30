@@ -1,4 +1,4 @@
-function stim = makeTest(seedval,dur,minband,maxband,samprate,ramp,base_rms)
+function stim = makeTest(seedval,dur,minband,maxband,samprate,ramp)
 % makes ramped test sounds using specific parameters
 
 rampPts = ceil((ramp/1000)*samprate);
@@ -9,7 +9,3 @@ npts = length(stim);
 % put envelope on it
 env = [0:1/(rampPts-1):1 ones(1,npts - 2*rampPts) 1:-1/(rampPts-1):0];
 stim = stim .* env;
-% scale to desired rms:
-rms = mean(stim.^2)/sqrt(2);
-ratio = rms/base_rms;
-stim = stim/sqrt(ratio);
