@@ -87,12 +87,13 @@ h=msgbox(['Session will last approximately ' num2str(PDR.len_session) ' minutes'
 uiwait(h)
 
 % make test sound:
-stim = makeTest(PDR.TEST_seed,PDR.TEST_dur,PDR.TEST_bandwidth(1),PDR.TEST_bandwidth(2),PDR.stim_Fs,PDR.TEST_ramp,PDR.TEST_base_rms);
+stim = makeTest(PDR.TEST_seed,PDR.TEST_dur,PDR.TEST_bandwidth(1),PDR.TEST_bandwidth(2),PDR.stim_Fs,PDR.TEST_ramp);
 PDR.TEST_sound = zeros(1,PDR.buf_pts);
 on_delay_pts = floor((PDR.buf_pts - length(stim))/2);
 PDR.TEST_on_delay_pts = on_delay_pts;
 PDR.TEST_sound(on_delay_pts+1:on_delay_pts+length(stim)) = stim; % place stimulus in buffer mid-section
-PDR.TEST_sound = (0.999)*PDR.TEST_sound ./ (max(abs(PDR.TEST_sound)));
+PDR.TEST_sound = PDR.TEST_sound ./ (max(abs(PDR.TEST_sound)));
+
 clear stim;
 
 quit = 0;
@@ -105,15 +106,15 @@ end
 % RAMP SETUP:
 ramplen = 5; % length of ramp in ms
 tmp = find(PDR.TEST_sound ~= 0);
-start = tmp(1);
-stop = tmp(end);
+PDR.TEST_start_pt = tmp(1);
+PDR.TEST_stop_pt = tmp(end);
 ptsramp=round(ramplen/1000*PDR.stim_Fs);
 on_rmp=1:-1/(ptsramp-1):0;
 off_rmp=0:1/(ptsramp-1):1;
 PDR.ADAPT_ramp = ones(1,PDR.buf_pts);
-PDR.ADAPT_ramp(1,start-length(on_rmp):start-1)=on_rmp;
-PDR.ADAPT_ramp(start:stop) = zeros(1,stop-start+1);
-PDR.ADAPT_ramp(1,stop+1:stop+length(off_rmp))=off_rmp;
+PDR.ADAPT_ramp(1,PDR.TEST_start_pt-length(on_rmp):PDR.TEST_start_pt-1)=on_rmp;
+PDR.ADAPT_ramp(PDR.TEST_start_pt:PDR.TEST_stop_pt) = zeros(1,PDR.TEST_stop_pt-PDR.TEST_start_pt+1);
+PDR.ADAPT_ramp(1,PDR.TEST_stop_pt+1:PDR.TEST_stop_pt+length(off_rmp))=off_rmp;
 
 % HRTF SETUP:
 PDR.HRTF_nlines=255;
@@ -169,6 +170,15 @@ else % using another format (e.g. for 930 or 929)
     end
 end
 
+% PICK STATES FOR THE ADAPTOR
+[resulting_rms, success]=gtone_state_picker(PDR.ADAPT_coefs,PDR.stim_Fs,PDR.ADAPT_dur,PDR.ADAPT_nstates,HRTF.AdaptL, HRTF.AdaptR,PDR.ADAPT_target_rms);
+if(abs(resulting_rms-PDR.ADAPT_target_rms)>0.05*PDR.ADAPT_target_rms)
+    warndlg('RMS voltage not matching target rms very well!');
+end
+if(success<0)
+    return;
+end
+
 % Make sure the session gets a unique filename
 cnt = double('a'+0);
 while exist ([PDR.data_path PDR.filename '.mat'],'file');
@@ -190,8 +200,6 @@ if strcmp(button1,'NO')
     return
 end
 
-
-
 %*********************************%
 %** PLOT PDR TRACE ***************%
 %*********************************%
@@ -207,15 +215,12 @@ session.stim_fs=PDR.stim_Fs;
 session.zoomval=0.4;
 screen_size = get(0, 'ScreenSize');% get scrn size
 figure(session.hFig); whitebg(gcf,'k');
-session.hTracePlot=subplot(2,2,1:2);
-session.hInfo=subplot(2,2,3); axis off;
+session.hInfo=subplot(3,3,4:6); axis off;
 session.txt(1) = text(.01,.9,'');
 session.txt(2) = text(.01,.7,'');
 session.txt(3) = text(.01,.5,'');
 session.txt(4) = text(.01,.3,'');
-session.hTrialPlot=subplot(2,2,4); axis off;
-set(session.hFig,'renderer','OpenGL'); %use OpenGL for renderer
-set(session.hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );
+session.hTracePlot=subplot(3,3,7:9); axis off;
 
 hold on;
 
@@ -252,6 +257,7 @@ disp(['It should be done in ~' num2str(lengthOFtrials) ' min from now (' num2str
 PDR = orderfields(PDR); % order fields by ASCII dictionary order
 save ([PDR.data_path PDR.filename '.mat'], 'PDR','HRTF');
 
+return
 % ENGAGE the main spatialPDR script:
 spatialPDR;
 

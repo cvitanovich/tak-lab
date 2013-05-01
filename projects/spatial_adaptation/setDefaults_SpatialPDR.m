@@ -15,12 +15,12 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'virtual',1, ...                        % flag for virtual sound presentation
     'record',1, ...                        % flag for recording pupillometer output
     'flag_adapt',1,...                     % flag for adapting stimulus
-    'ntrials',50,...                       % # of trials in session
-    'npretrials',5,...                     % # of trials before first test trial
+    'ntrials',600,...                       % # of trials in session
+    'npretrials',100,...                     % # of trials before first test trial
     'n_test_trials',[],...                  % # of test trials 
     'buf_pts',16384,...                     % number of pts in each buffer
     'buf_dur',[],...                        % buffer duration in ms
-    'isi_buf',3,...                         % no. buffers between trials
+    'isi_buf',7,...                         % no. buffers between trials
     'isi_time',[],...                       % ISI (seconds) between trials
     'decimationfactor',4, ...               % decimation factor for data collection
     'stim_Fs', 30000, ...                   % sampling rate (Hz) for stimuli
@@ -42,20 +42,23 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ADAPT_cF',6000,...                     % center frequency (Hz) (if relevant)
     'ADAPT_coefs',[],...                    % FIR coefficients to generate adapting stimulus
     'ADAPT_scale',30000,...                  % test scale for adaptor
-    'ADAPT_ramp',[],...                     % ramp for trial segments
-    'ADAPT_seed',47,...                     % seed for generating adaptor (using C code)
+    'ADAPT_ramp',5,...                     % ramp for trial segments
+    'ADAPT_nstates',16,...                  % no. of desired states for adaptor
+    'ADAPT_dur',4,...                       % adaptor duration in seconds
+    'ADAPT_target_rms',0.1,...                % desired rms amplitude for adaptor (before scaling)
+    'ADAPT_seeds',[],...                     % seed for generating adaptor (using C code)
     ...
     ...                                     % TEST STIMULUS PARAMETERS:
     'TEST_soundtype','octave',...           % type of test sound ('gammatone', 'octave', 'broadband', etc.)
     'TEST_seed',47,...                      % seed value to for random number generator
-    'TEST_base_rms',0.0350,...              % rms level for test sound
+    'TEST_target_rms',0.1,...              % rms level for test sound
     'TEST_bandwidth',[4000 8000],...            % frequency range (min max)
     'TEST_dur',100,...                      % duration of test sounds (ms)
     'TEST_ramp',5,...                       % ramp duration for test sound (should be 5ms)
     'TEST_on_delay_pts',[],...              % delay before test sound onset (TBD)
-    'TEST_trial_freq',3, ...                % test sound every x trials
+    'TEST_trial_freq',15, ...                % test sound every x trials
     'TEST_trial_jitter',0, ...              % maximum jitter in isi_buf
-    'TEST_scales',[1000 5000 15000 32760],...                 %[10 20 60 80 500],... % test scales (try 10, 20 ,40, 60, 80, 200, 300, 500, 1000)
+    'TEST_scales',[100 500 1000 5000 10000 15000 32760],...                 %[10 20 60 80 500],... % test scales (try 10, 20 ,40, 60, 80, 200, 300, 500, 1000)
     'TEST_sound',[],...                     % test sound stored here
     'TEST_scale_sequence',[],...            % sequence of test sound scales
     'TEST_nlocs',1,...                     % no. of test locations (default is 3)
@@ -64,4 +67,4 @@ PDR = struct(...                            % MAIN PARAMETERS:
     ...
     ...                                     % HRTF PARAMETERS:
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
-    'HRTF_fname','1073AC_eq_ABLequal_norm.mat');
+    'HRTF_fname','1073AC_eq_ABLequal_normed.mat');

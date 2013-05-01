@@ -21,6 +21,7 @@ TDT.srate=1e6 / TDT.Fs;
 TDT.buf_pts=PDR.buf_pts;
 TDT.attens=[0 0];
 
+keyboard
 % TDT INIT
 out=TDT_init;
 if(out==-1); return; end;

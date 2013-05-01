@@ -70,17 +70,21 @@ if(1) % for debugging without the TDT
     TDT.n_total_buffers=TESTLEFT(end);
     TESTRIGHT=(TDT.n_total_buffers+1):(TDT.n_total_buffers+PDR.TEST_nlocs);
     TDT.n_total_buffers=TESTRIGHT(end);
-    filtered_test=zeros(1,PDR.buf_pts);
+    filtered_test_left=zeros(1,PDR.buf_pts);
+    filtered_test_right=filtered_test_left;
     % loop through test sounds
     for(j=1:PDR.TEST_nlocs)
         S232('allotf',TESTLEFT(j),PDR.buf_pts);
         S232('allotf',TESTRIGHT(j),PDR.buf_pts);
         % filter each test sound with HRTFS & Store on AP2 Card
-        filtered_test=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
-        S232('pushf',filtered_test,PDR.buf_pts);
+        filtered_test_left=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
+        filtered_test_right=filter(HRTF.TestR(:,j),1,PDR.TEST_sound);
+        rms_val=(sqrt(mean(filtered_test_left.^2))+sqrt(mean(filtered_test_left.^2)))/2;
+        filtered_test_left = (PDR.TEST_target_rms/rms_val).*filtered_test_left;
+        filtered_test_right = (PDR.TEST_target_rms/rms_val).*filtered_test_right;
+        S232('pushf',filtered_test_left,PDR.buf_pts);
         S232('qpopf',TESTLEFT(j));
-        filtered_test=filter(HRTF.TestR(:,j),1,PDR.TEST_sound);
-        S232('pushf',filtered_test,PDR.buf_pts);
+        S232('pushf',filtered_test_right,PDR.buf_pts);
         S232('qpopf',TESTRIGHT(j));
     end
     
