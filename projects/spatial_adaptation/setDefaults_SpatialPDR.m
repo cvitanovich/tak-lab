@@ -1,4 +1,5 @@
 % SETUP DEFAULTS FOR spatialPDR EXPERIMENT
+
 % select folder location based on computer being used:
 if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
     code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/spatial_adaptation/';
@@ -44,7 +45,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ADAPT_scale',30000,...                  % test scale for adaptor
     'ADAPT_ramp',5,...                     % ramp for trial segments
     'ADAPT_nstates',16,...                  % no. of desired states for adaptor
-    'ADAPT_dur',4,...                       % adaptor duration in seconds
+    'ADAPT_dur',[],...                       % adaptor duration in seconds (calculated from isi_buf) in seconds
     'ADAPT_target_rms',0.1,...                % desired rms amplitude for adaptor (before scaling)
     'ADAPT_seeds',[],...                     % seed for generating adaptor (using C code)
     ...
@@ -53,7 +54,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_seed',47,...                      % seed value to for random number generator
     'TEST_target_rms',0.1,...              % rms level for test sound
     'TEST_bandwidth',[4000 8000],...            % frequency range (min max)
-    'TEST_dur',100,...                      % duration of test sounds (ms)
+    'TEST_dur',0.1,...                      % duration of test sounds (seconds)
     'TEST_ramp',5,...                       % ramp duration for test sound (should be 5ms)
     'TEST_on_delay_pts',[],...              % delay before test sound onset (TBD)
     'TEST_trial_freq',15, ...                % test sound every x trials
@@ -68,3 +69,6 @@ PDR = struct(...                            % MAIN PARAMETERS:
     ...                                     % HRTF PARAMETERS:
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
     'HRTF_fname','1073AC_eq_ABLequal_normed.mat');
+
+PDR.isi_time=PDR.buf_pts/PDR.stim_Fs;
+PDR.ADAPT_dur=(PDR.isi_buf*PDR.isi_time) + (PDR.isi_time - PDR.TEST_dur)/2;

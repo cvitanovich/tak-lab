@@ -1,4 +1,4 @@
-function [resulting_rms, state_list, success]=gtone_state_picker(gtone_coefs,Fs,dur,buf_pts,nStates,hrtf_lt, hrtf_rt,target_rms)
+function [resulting_rms, state, success]=test_state_picker(test,Fs,dur,HRTF_LEFT,HRTF_RIGHT,target_rms)
 % picks states that avoid clipping given desired parameters
 
 hWait=waitbar(0,'Grabbing states for adaptor...');
@@ -8,12 +8,11 @@ S=round(1000*rand(1,nStates*10));
 
 cnt=0; cyc=0; success=1;
 resulting_rms=[];
-state_list=[];
 while(cnt<nStates)
     cyc=cyc+1;
     % make a gammatone with state=cyc
     rand('state',S(cyc));
-    snd=rand(1,ceil(dur*Fs+buf_pts));
+    snd=rand(1,dur*Fs);
     snd=filtfilt(gtone_coefs,1,snd);
     snd=snd./max(abs(snd));
     % convolve with hrtf coefficients for desired location

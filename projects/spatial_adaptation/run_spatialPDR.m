@@ -71,23 +71,15 @@ q=clock;
 y=num2str(q(1));y=y(3:4);
 m=num2str(q(2));if size(m,2)<2;m=['0' m];end
 d=num2str(q(3));if size(d,2)<2;d=['0' d];end
-switch PDR.bird_id
-    case 929
-        LETTER = 'l';
-    case 930
-        LETTER = 'm';
-    case 0
-        LETTER = 't';
-end
 
-PDR.filename = [y m d LETTER 'a'];  %930=m 929=l 882=d 883=e  (a is index to experiment number for that day)
+PDR.filename = [y m d '_' num2str(PDR.bird_id) 'a'];
 PDR.npts_totalplay = PDR.ntrials*(PDR.isi_buf+1)*PDR.buf_pts; % Calculate length of session!
 PDR.len_session = (1/60)*(PDR.npts_totalplay/PDR.stim_Fs); % length of session in minutes
 h=msgbox(['Session will last approximately ' num2str(PDR.len_session) ' minutes']);
 uiwait(h)
 
 % make test sound:
-stim = makeTest(PDR.TEST_seed,PDR.TEST_dur,PDR.TEST_bandwidth(1),PDR.TEST_bandwidth(2),PDR.stim_Fs,PDR.TEST_ramp);
+stim = makeTest(PDR.TEST_seed,PDR.TEST_dur*1000,PDR.TEST_bandwidth(1),PDR.TEST_bandwidth(2),PDR.stim_Fs,PDR.TEST_ramp);
 PDR.TEST_sound = zeros(1,PDR.buf_pts);
 on_delay_pts = floor((PDR.buf_pts - length(stim))/2);
 PDR.TEST_on_delay_pts = on_delay_pts;
@@ -118,14 +110,14 @@ PDR.ADAPT_ramp(1,PDR.TEST_stop_pt+1:PDR.TEST_stop_pt+length(off_rmp))=off_rmp;
 
 % HRTF SETUP:
 PDR.HRTF_nlines=255;
-HRTF.TestL = nan*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
+HRTF.TestL = NaN*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
 HRTF.TestR = HRTF.TestL;
 
 if(PDR.flag_adapt>0)
     % Make FIR coefficients for Adaptor:
     PDR.ADAPT_coefs = makeGammaFIR(PDR.stim_Fs,PDR.ADAPT_cF,PDR.ADAPT_species);
-    HRTF.AdaptL = nan*ones(1,PDR.HRTF_nlines);
-    HRTF.AdaptR = nan*ones(1,PDR.HRTF_nlines);
+    HRTF.AdaptL = NaN*ones(1,PDR.HRTF_nlines);
+    HRTF.AdaptR = NaN*ones(1,PDR.HRTF_nlines);
 else
     HRTF.AdaptL = zeros(1,PDR.HRTF_nlines);
     HRTF.AdaptR = HRTF.AdaptL;
@@ -171,13 +163,14 @@ else % using another format (e.g. for 930 or 929)
 end
 
 % PICK STATES FOR THE ADAPTOR
-[resulting_rms, success]=gtone_state_picker(PDR.ADAPT_coefs,PDR.stim_Fs,PDR.ADAPT_dur,PDR.ADAPT_nstates,HRTF.AdaptL, HRTF.AdaptR,PDR.ADAPT_target_rms);
+[resulting_rms, state_list, success]=gtone_state_picker(PDR.ADAPT_coefs,PDR.stim_Fs,PDR.ADAPT_dur,PDR.buf_pts,PDR.ADAPT_nstates,HRTF.AdaptL, HRTF.AdaptR,PDR.ADAPT_target_rms);
 if(abs(resulting_rms-PDR.ADAPT_target_rms)>0.05*PDR.ADAPT_target_rms)
     warndlg('RMS voltage not matching target rms very well!');
 end
 if(success<0)
     return;
 end
+PDR.ADAPT_state_list=state_list;
 
 % Make sure the session gets a unique filename
 cnt = double('a'+0);

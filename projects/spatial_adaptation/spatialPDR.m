@@ -40,14 +40,18 @@ cnt=1; % ISI counter
 
 
 %% ADAPTOR FILTERING PARAMS
-% initial state
-adapt_state = PDR.ADAPT_seed;
+% recording adaptor sequence:
+PDR.ADAPT_state_seq=[];
+% initial state (picked randomly from list of adaptor states)
+rand_idx=round((length(PDR.ADAPT_seeds)-1)*rand+1);
+adapt_state = PDR.ADAPT_seeds(rand_idx);
+PDR.ADAPT_state_seq(end+1)=rand_idx;
 % circular buffer for continuous filtered adaptor:
 CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
 % circular buffers for HRTF filtering (left/right):
 CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
 
-if(1) % for debugging without the TDT
+if(true) % for debugging without the TDT
     %% INITIALIZE TDT
     out=TDT_init;
     if(out==-1); return; end;
@@ -66,27 +70,22 @@ if(1) % for debugging without the TDT
     
     %% FILTER TEST SOUNDS WITH HRTFS
     % buffer assignments for TDT
-    TESTLEFT=(TDT.n_total_buffers+1):(TDT.n_total_buffers+PDR.TEST_nlocs);
-    TDT.n_total_buffers=TESTLEFT(end);
-    TESTRIGHT=(TDT.n_total_buffers+1):(TDT.n_total_buffers+PDR.TEST_nlocs);
-    TDT.n_total_buffers=TESTRIGHT(end);
+    TESTLEFT=zeros(PDR.TEST_nlocs,PDR.buf_pts);
+    TESTRIGHT=TESTLEFT;
     filtered_test_left=zeros(1,PDR.buf_pts);
     filtered_test_right=filtered_test_left;
     % loop through test sounds
     for(j=1:PDR.TEST_nlocs)
-        S232('allotf',TESTLEFT(j),PDR.buf_pts);
-        S232('allotf',TESTRIGHT(j),PDR.buf_pts);
         % filter each test sound with HRTFS & Store on AP2 Card
         filtered_test_left=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
         filtered_test_right=filter(HRTF.TestR(:,j),1,PDR.TEST_sound);
         rms_val=(sqrt(mean(filtered_test_left.^2))+sqrt(mean(filtered_test_left.^2)))/2;
         filtered_test_left = (PDR.TEST_target_rms/rms_val).*filtered_test_left;
         filtered_test_right = (PDR.TEST_target_rms/rms_val).*filtered_test_right;
-        S232('pushf',filtered_test_left,PDR.buf_pts);
-        S232('qpopf',TESTLEFT(j));
-        S232('pushf',filtered_test_right,PDR.buf_pts);
-        S232('qpopf',TESTRIGHT(j));
+        TESTLEFT(j,:)=filtered_test_left;
+        TESTRIGHT(j,:)=filtered_test_right;
     end
+    clear filtered_test_left filtered_test_right
     
     %% SET ATTENS
     TDT.attens=[PDR.base_atten PDR.base_atten];
@@ -112,7 +111,7 @@ end
 seekpos=0;
 while(seekpos < TDT.npts_total_play)
     % WAIT FOR LAST BUFFER TO FINISH
-    %while(check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)])); end;
+    while(check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)])); end;
     
     tic;
     
@@ -137,9 +136,29 @@ while(seekpos < TDT.npts_total_play)
         loc=PDR.TEST_loc_sequence(Signalcnt);
         if(loc~=0)
             signalScale=PDR.TEST_scale_sequence(Signalcnt);
-        else
+            test_left=TESTLEFT(loc,:);
+            test_right=TESTRIGHT(loc,:);
+        else % not playing test sound in this trial!
             signalScale=0;
+            test_left=zeros(1,PDR.buf_pts);
+            test_right=zeros(1,PDR.buf_pts);
         end
+    end
+    % SETUP ADAPTOR FOR TRIAL BUFFER
+    if(cnt==PDR.isi_buf && PDR.flag_adapt>0)
+        % clear circular buffers & set new seed value
+        rand_idx=round((length(PDR.ADAPT_seeds)-1)*rand+1);
+        adapt_state = PDR.ADAPT_seeds(rand_idx);
+        PDR.ADAPT_state_seq(end+1)=rand_idx; % save state sequence
+        CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
+        CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
+        % paste prior/new buffers together (the trial ramp will remove any
+        % possible discontinuities in the adaptor)
+        [adapt_state, aleft_new, aright_new, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
+        adapt_left=[adapt_left(1:PDR.TEST_on_delay_pts) zeros(1,length(PDR.TEST_sound)) ...
+            aleft_new((end-(PDR.TEST_on_delay_pts+length(PDR.TEST_sound))+1):end)];
+        adapt_right=[adapt_left(1:PDR.TEST_on_delay_pts) zeros(1,length(PDR.TEST_sound)) ...
+            aright_new((end-(PDR.TEST_on_delay_pts+length(PDR.TEST_sound))+1):end)];
     end
     
     % LEFT CHANNEL BUFFER
@@ -203,9 +222,29 @@ while(seekpos < TDT.npts_total_play)
             loc=PDR.TEST_loc_sequence(Signalcnt);
             if(loc~=0)
                 signalScale=PDR.TEST_scale_sequence(Signalcnt);
-            else
+                test_left=TESTLEFT(loc,:);
+                test_right=TESTRIGHT(loc,:);
+            else % not playing test sound in this trial!
                 signalScale=0;
+                test_left=zeros(1,PDR.buf_pts);
+                test_right=zeros(1,PDR.buf_pts);
             end
+        end
+        % SETUP ADAPTOR FOR TRIAL BUFFER
+        if(cnt==PDR.isi_buf && PDR.flag_adapt>0)
+            % initialize circular buffers & set new seed value
+            rand_idx=round((length(PDR.ADAPT_seeds)-1)*rand+1);
+            adapt_state = PDR.ADAPT_seeds(rand_idx);
+            PDR.ADAPT_state_seq(end+1)=rand_idx; % save state sequence
+            CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
+            CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
+            % paste prior/new buffers together (the trial ramp will remove any
+            % possible discontinuities in the adaptor)
+            [adapt_state, aleft_new, aright_new, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
+            adapt_left=[adapt_left(1:PDR.TEST_on_delay_pts) zeros(1,length(PDR.TEST_sound)) ...
+                aleft_new((end-(PDR.TEST_on_delay_pts+length(PDR.TEST_sound))+1):end)];
+            adapt_right=[adapt_left(1:PDR.TEST_on_delay_pts) zeros(1,length(PDR.TEST_sound)) ...
+                aright_new((end-(PDR.TEST_on_delay_pts+length(PDR.TEST_sound))+1):end)];
         end
         % LEFT CHANNEL BUFFER
         update_buffer(LEFT_PLAY(2),adapt_left,test_left,cnt,Signalcnt,signalScale);
