@@ -260,34 +260,6 @@ while ~chk2
     end
 end
 
-function [bbnoise] = getBBN(state,Fs,dur, minfreq, maxfreq)
-global PDR
-%GetNoise_BB:	Create a BroadBand Noise (2-11 kHz)
-%state:  rand state
-%Fs:	Sampling rate (Hz)
-%dur:	Stimulus duration (ms)
-dur = dur/1000;
-len = round(dur*Fs);
-minfreq = round(((minfreq + 1)/Fs) * len);
-maxfreq = round(((maxfreq + 1)/Fs) * len);
-range = maxfreq-minfreq+1;
-% mag spectrum = 1 between set frequencies:
-mag = zeros(len,1);
-mag(minfreq:maxfreq) = ones(range,1);
-% random phase spectrum between set frequencies:
-% rand('state',sum(100*clock));
-rand('state',state); % use state
-phi = (rand(len,1) - 0.5) * (2*pi);
-% combine phase and magnitude:
-X = mag .* ( (cos(phi)) + (i .* sin(phi)) );
-% convert to time domain:
-bbnoise = real(ifft(X));
-% scale to RMS = 0.23591 !!!!!!!!
-rms = norm(bbnoise)/sqrt(length(bbnoise))';
-bbnoise = bbnoise * (0.23591/rms);
-bbnoise = bbnoise';
-%bbnoise = (bbnoise/max(abs(bbnoise)))';
-
 function AMStim()
 % Note: Noise1 is lead and Noise2 is lag
 % AMStim (Adapted from Caitlin/Brian's head turn exp't)
@@ -327,37 +299,47 @@ numsnds=length(PDR.SOUNDS_rand_states);
 % different carriers
 hWait = waitbar(0,'Generating Sounds');
 for i0=1:numsnds
+    
     % Make Noise #1
-    Noise1 = getBBN(PDR.SOUNDS_rand_states(i0), SR, StimDur, PDR.SOUNDS_carrier_bandwidth(1), PDR.SOUNDS_carrier_bandwidth(2));
-    Noise1 = Noise1(1:StimPnts);
+    x = getBBN(PDR.SOUNDS_rand_states(i0), SR, StimDur, PDR.SOUNDS_carrier_bandwidth(1), PDR.SOUNDS_carrier_bandwidth(2));
+    % scale to RMS = 0.23591 !!!!!!!!
+    x=rms_scale(x,target_rms);
+    Noise1 = x(1:StimPnts)';
     % Scale to desired amplitude
     Noise1 = Noise1 * 50; % scale by 50 so that speaker scaling factors aren't too big (well, small)!
     Noise1 = Noise1 * 10^(PDR.SOUNDS_amplitude/20)*0.00002; % amplitude re: 20 uPa   
+    
     % copy Noise #1 to make Noise #2
     Noise2 = Noise1;
+    
     % Make Envelope #1
     Env1 = getBBN(PDR.SOUNDS_states(1), SR, PAD*StimDur, PDR.SOUNDS_env_bandwidth(1), PDR.SOUNDS_env_bandwidth(2));
-    Env1 = Env1(1:StimPnts);
+    Env1 = Env1(1:StimPnts)';
     Env1 = Env1 - min(Env1); Env1 =  Env1 / max(Env1);  % normalize
     Env1 = Env1 .* (PDR.SOUNDS_env_depth/100); % AM depth (as a percent)
     Env1 = Env1 + 1 - (PDR.SOUNDS_env_depth/100);
+    
     % copy Envelope #1 to make Envelope #2
     Env2 = Env1;
+    
     % get de-correlateing envelope #1
     DCEnv1 = getBBN(PDR.SOUNDS_states(2), SR, PAD*StimDur, PDR.SOUNDS_env_bandwidth(1), PDR.SOUNDS_env_bandwidth(2));
     DCEnv1 = DCEnv1(1:StimPnts);
     DCEnv1 = DCEnv1 - min(DCEnv1); DCEnv1 =  DCEnv1 / max(DCEnv1);  % normalize
     DCEnv1 = DCEnv1 .* (PDR.SOUNDS_env_depth/100); % AM depth (as a percent)
     DCEnv1 = DCEnv1 + 1 - (PDR.SOUNDS_env_depth/100);
+    
     % get de-correlateing envelope #2
     DCEnv2 = getBBN(PDR.SOUNDS_states(3), SR, PAD*StimDur, PDR.SOUNDS_env_bandwidth(1), PDR.SOUNDS_env_bandwidth(2));
     DCEnv2 = DCEnv2(1:StimPnts);
     DCEnv2 = DCEnv2 - min(DCEnv2); DCEnv2 =  DCEnv2 / max(DCEnv2);  % normalize
     DCEnv2 = DCEnv2 .* (PDR.SOUNDS_env_depth/100); % AM depth (as a percent)
     DCEnv2 = DCEnv2 + 1 - (PDR.SOUNDS_env_depth/100);
+    
     % ** mix de-correlateing envelopes in with original envelopes **
     Env1DC = ((1-PDR.SOUNDS_mix).*DCEnv1) + ((PDR.SOUNDS_mix).*Env1);
     Env2DC = ((1-PDR.SOUNDS_mix).*DCEnv2) + ((PDR.SOUNDS_mix).*Env2);
+    
     % !!! re-normalize the envelopes
     Env1DC = Env1DC - min(Env1DC); Env1DC =  Env1DC / max(Env1DC);  % normalize
     Env1DC = Env1DC .* (PDR.SOUNDS_env_depth/100); % AM depth (as a percent)
@@ -391,11 +373,8 @@ for i0=1:numsnds
     Env2DC = rampSounds(Env2DC, SR, PDR.SOUNDS_ramp); % stim envelope
     
     % set rms amplitude for envelopes:
-    % calculate multiplier to equalize rms with min rms
-    r=sqrt((length(Env1DC)*PDR.SOUNDS_rms^2)/sum(Env1DC.^2));
-    Env1DC=r.*Env1DC;
-    r=sqrt((length(Env2DC)*PDR.SOUNDS_rms^2)/sum(Env2DC.^2));
-    Env2DC=r.*Env2DC;
+    Env1DC=rms_scale(Env1DC,PDR.SOUNDS_rms);
+    Env2DC=rms_scale(Env2DC,PDR.SOUNDS_rms);
     
     
     % CALCULATE CORRELATION COEFFICIENTS (Final LEAD/LAG Envelopes)
@@ -547,28 +526,6 @@ uicontrol('Style', 'pushbutton', 'String', 'Close and Continue',...
     'Units','Normalized','Position', [0.6 0.1 0.25 0.1],...
     'BackgroundColor','g','Callback', 'close(''hist'')');
 uiwait(hTemp)
-
-
-function [Bs,As]=filt_butter(fc,fs,order)
-% creates a low pass butterworth filter
-[B,A] = butter(order,2*fc/fs); % [0:pi] maps to [0:1] here
-[sos,g] = tf2sos(B,A);
-% sos =
-%  1.00000  2.00080   1.00080  1.00000  -0.92223  0.28087
-%  1.00000  1.99791   0.99791  1.00000  -1.18573  0.64684
-%  1.00000  1.00129  -0.00000  1.00000  -0.42504  0.00000
-% 
-% g = 0.0029714
-% 
-Bs = sos(:,1:3); % Section numerator polynomials
-As = sos(:,4:6); % Section denominator polynomials
-
-function [stim] = rampSounds(stim, SR, SOUNDS_ramp)
-% SOUNDS_ramp should be in ms
-ramp_pts = ceil(SR*(SOUNDS_ramp/1000));
-npts = length(stim) - 2*ramp_pts - 2;
-rampenv = [0:(1/ramp_pts):1 ones(1,npts) 1:-(1/ramp_pts):0];
-stim = stim .* rampenv;
 
 function soundBufferSetup
 global PDR

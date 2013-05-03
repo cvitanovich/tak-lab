@@ -1,5 +1,6 @@
 function y = rms2(x, dim)
-% a copy of the RMS function
+% a copy of the RMS function from Matlab 7
+
 %RMS    Root mean squared value.
 %   For vectors, RMS(X) is the root mean squared value in X. For matrices,
 %   RMS(X) is a row vector containing the RMS value from each column. For

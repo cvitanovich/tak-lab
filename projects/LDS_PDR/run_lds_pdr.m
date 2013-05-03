@@ -11,8 +11,6 @@
 % this will depend on buffer length, AP2 card memory, etc. 
 % 50 as a max seems safe for now)
 
-
-
 button = questdlg('What do you wish to do?','LDS PDR Experiment','TEST EQUIPMENT','RUN EXPERIMENT','DO NOTHING AND QUIT','TEST EQUIPMENT');
 
 save tmp button
@@ -27,18 +25,17 @@ end
 global session % session plotting info
 global PDR % variables used in the experiment must be global so that all the functions can use them.
 
-% INITIAL SETUP OF DEFAULTS AND TRIAL SEQUENCE:
-lds_switchyard('setDefaults'); % sets default values for running a session
-
 if strcmp(button,'RUN EXPERIMENT')
     % NOTE: sounds and trial sequence setup taken care of in AlexMenu.m
     H = AlexMenu;
     uiwait(H)
 elseif strcmp(button,'TEST EQUIPMENT')
-    lds_switchyard('speakerTestSetup');
+    % INITIAL SETUP OF DEFAULTS AND TRIAL SEQUENCE:
+    setDefaults; % sets default values for running a session
+    calcSessionLen;
+    speakerTestSetup;
     PDR.exit_flag == 0;
 end
-
 
 if PDR.exit_flag == -1
     disp('Starting experiment...')
@@ -107,7 +104,6 @@ passmein.sound_onset=tmp(1);
 passmein.trials_to_show=3;
 passmein.hab_loc=find(PDR.SOUNDS_azimuths==PDR.LAG_hab_pos);
 passmein.test_trial_freq=PDR.TEST_trial_freq;
-
 
 %*********************************%
 %**LOCATION SEQUENCE FOR TDT******%

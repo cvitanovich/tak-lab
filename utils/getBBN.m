@@ -16,6 +16,6 @@ mag(minfreq:maxfreq) = ones(range,1);
 rand('state',seed); % use seed
 phi = (rand(len,1) - 0.5) * (2*pi);
 % combine phase and magnitude:
-X = mag .* ( (cos(phi)) + (i .* sin(phi)) );
+X = mag .* ( (cos(phi)) + (1i .* sin(phi)) );
 % convert to time domain:
 bbnoise = real(ifft(X));

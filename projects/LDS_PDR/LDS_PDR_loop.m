@@ -1,4 +1,4 @@
-function LDS_PDR_loop
+function lds_lds_loop
 % function with subroutines for double buffered LDS PDR expt
 global TDT PDR session
 
@@ -120,10 +120,11 @@ while(seekpos < TDT.npts_total_play)
             switch_speaker(loc);
             
             % select roved stimuli for buffer insertion
-            S232('qpushf',PDR.LEAD_sounds{PDR.SOUNDS_rove_sequence(Signalcnt)});
+            rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
+            S232('qpushf',PDR.LEAD_sounds{rove_id});
             S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
             S232('qpop16',LEAD_PLAY(1));
-            S232('qpushf',PDR.LAG_sounds{PDR.SOUNDS_rove_sequence(Signalcnt)});
+            S232('qpushf',PDR.LAG_sounds{rove_id});
             S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
             S232('qpop16',LAG_PLAY(1));
         end
@@ -223,10 +224,11 @@ while(seekpos < TDT.npts_total_play)
                 switch_speaker(loc);
                 
                 % select roved stimuli for buffer insertion
-                S232('qpushf',PDR.LEAD_sounds{PDR.SOUNDS_rove_sequence(Signalcnt)});
+                rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
+                S232('qpushf',PDR.LEAD_sounds{rove_id});
                 S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
                 S232('qpop16',BUF_A2);
-                S232('qpushf',PDR.LAG_sounds{PDR.SOUNDS_rove_sequence(Signalcnt)});
+                S232('qpushf',PDR.LAG_sounds{rove_id});
                 S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
                 S232('qpop16',BUF_B2);
             end

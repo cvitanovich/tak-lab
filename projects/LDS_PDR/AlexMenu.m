@@ -1,6 +1,11 @@
 function varargout = AlexMenu(varargin)
 global PDR trials_handle sounds_handle
 
+% INITIAL SETUP OF DEFAULTS AND TRIAL SEQUENCE:
+setDefaults; % sets default values for running a session
+PDR.exit_flag=1; % defaults to one
+calcSessionLen;
+
 % Begin GUI initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
@@ -264,7 +269,7 @@ refreshTrials;
 % LENGTH OF SESSION:
 function len_session_CreateFxn(hObject, eventdata, handles)
 global PDR
-lds_switchyard('calcSessionLen');
+calcSessionLen;
 set(hObject,'String',num2str(PDR.len_session));
 
 % SPL SELECTION:
@@ -344,8 +349,8 @@ refreshTrials;
 % REFRESH TRIAL SEQUENCE:
 function refreshTrials
 global PDR trials_handle
-lds_switchyard('setupTrials');
-lds_switchyard('calcSessionLen');
+setupTrials;
+calcSessionLen;
 handles = guihandles(gcf);
 sec=num2str(PDR.len_session(2));
 if length(sec)==1
@@ -385,7 +390,7 @@ clear PDR trials_handle
 % REFRESH SOUNDS:
 function refreshSounds
 global PDR sounds_handle 
-lds_switchyard('AMStim'); % calculate lead lag sounds using correlation and state values (for reproducible sounds)
+AMStim; % calculate lead lag sounds using correlation and state values (for reproducible sounds)
 handles=guihandles(gcf);
 for i0=1:PDR.SOUNDS_num_carriers
     temp(i0)=PDR.SOUNDS_env_correlations{i0};
@@ -393,7 +398,7 @@ end
 set(handles.correlation_display_box,'String',num2str(mean(temp)));
 axes(sounds_handle);
 set(gca,'FontSize',8);
-lds_switchyard('soundBufferSetup');
+soundBufferSetup;
 hold off;
 tmp = find(PDR.LAG_sounds{1}~=0);
 start = tmp(1); stop=tmp(end);
@@ -468,7 +473,7 @@ global PDR
 handles=guihandles(gcf);
 % load and read calibration data... set scales/attens
 if(~PDR.DEBUG)
-    lds_switchyard('readCalibFiles');
+    readCalibFiles;
 
     if ~strcmp(PDR.SOUNDS_calib_fnames{1},'ERROR')
         % set display info
