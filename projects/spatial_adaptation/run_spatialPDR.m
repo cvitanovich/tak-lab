@@ -250,8 +250,8 @@ disp(['It should be done in ~' num2str(lengthOFtrials) ' min from now (' num2str
 PDR = orderfields(PDR); % order fields by ASCII dictionary order
 save ([PDR.data_path PDR.filename '.mat'], 'PDR','HRTF');
 
-return
 % ENGAGE the main spatialPDR script:
+keyboard
 spatialPDR;
 
 b=clock;

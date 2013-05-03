@@ -16,12 +16,12 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'virtual',1, ...                        % flag for virtual sound presentation
     'record',1, ...                        % flag for recording pupillometer output
     'flag_adapt',1,...                     % flag for adapting stimulus
-    'ntrials',600,...                       % # of trials in session
-    'npretrials',100,...                     % # of trials before first test trial
+    'ntrials',50,...                       % # of trials in session
+    'npretrials',0,...                     % # of trials before first test trial
     'n_test_trials',[],...                  % # of test trials 
     'buf_pts',16384,...                     % number of pts in each buffer
     'buf_dur',[],...                        % buffer duration in ms
-    'isi_buf',7,...                         % no. buffers between trials
+    'isi_buf',3,...                         % no. buffers between trials
     'isi_time',[],...                       % ISI (seconds) between trials
     'decimationfactor',4, ...               % decimation factor for data collection
     'stim_Fs', 30000, ...                   % sampling rate (Hz) for stimuli
@@ -47,7 +47,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ADAPT_nstates',16,...                  % no. of desired states for adaptor
     'ADAPT_dur',[],...                       % adaptor duration in seconds (calculated from isi_buf) in seconds
     'ADAPT_target_rms',0.1,...                % desired rms amplitude for adaptor (before scaling)
-    'ADAPT_seeds',[],...                     % seed for generating adaptor (using C code)
+    'ADAPT_seeds',[],...                     % seed for generating adaptor
     ...
     ...                                     % TEST STIMULUS PARAMETERS:
     'TEST_soundtype','octave',...           % type of test sound ('gammatone', 'octave', 'broadband', etc.)
@@ -57,7 +57,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_dur',0.1,...                      % duration of test sounds (seconds)
     'TEST_ramp',5,...                       % ramp duration for test sound (should be 5ms)
     'TEST_on_delay_pts',[],...              % delay before test sound onset (TBD)
-    'TEST_trial_freq',15, ...                % test sound every x trials
+    'TEST_trial_freq',2, ...                % test sound every x trials
     'TEST_trial_jitter',0, ...              % maximum jitter in isi_buf
     'TEST_scales',[100 500 1000 5000 10000 15000 32760],...                 %[10 20 60 80 500],... % test scales (try 10, 20 ,40, 60, 80, 200, 300, 500, 1000)
     'TEST_sound',[],...                     % test sound stored here

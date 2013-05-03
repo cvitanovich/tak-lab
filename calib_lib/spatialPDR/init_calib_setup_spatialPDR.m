@@ -53,7 +53,7 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'scales_2_try_for_cutoffs',fliplr(10.^([0:.09:4.5 log10(32760)])),... % these are the scales to try to avoid nonlinearities due to speaker limitations and noise floor, etc.
     ...
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
-    'HRTF_fname','925AD_eq_ABLequal.mat');
+    'HRTF_fname','1073AC_eq_ABLequal_normed.mat');
 
 Prompt='Enter OWL ID # for this calibration session';
 Title='Owl ID';

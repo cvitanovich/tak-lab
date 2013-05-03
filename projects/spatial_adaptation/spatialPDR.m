@@ -43,8 +43,8 @@ cnt=1; % ISI counter
 % recording adaptor sequence:
 PDR.ADAPT_state_seq=[];
 % initial state (picked randomly from list of adaptor states)
-rand_idx=round((length(PDR.ADAPT_seeds)-1)*rand+1);
-adapt_state = PDR.ADAPT_seeds(rand_idx);
+rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
+adapt_state = PDR.ADAPT_state_list(rand_idx);
 PDR.ADAPT_state_seq(end+1)=rand_idx;
 % circular buffer for continuous filtered adaptor:
 CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
@@ -132,6 +132,8 @@ while(seekpos < TDT.npts_total_play)
         [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
     end
     % TEST TRIAL SCALE
+    test_left=zeros(1,PDR.buf_pts);
+    test_right=zeros(1,PDR.buf_pts);
     if(cnt==PDR.isi_buf)
         loc=PDR.TEST_loc_sequence(Signalcnt);
         if(loc~=0)
@@ -140,15 +142,13 @@ while(seekpos < TDT.npts_total_play)
             test_right=TESTRIGHT(loc,:);
         else % not playing test sound in this trial!
             signalScale=0;
-            test_left=zeros(1,PDR.buf_pts);
-            test_right=zeros(1,PDR.buf_pts);
         end
     end
     % SETUP ADAPTOR FOR TRIAL BUFFER
     if(cnt==PDR.isi_buf && PDR.flag_adapt>0)
         % clear circular buffers & set new seed value
-        rand_idx=round((length(PDR.ADAPT_seeds)-1)*rand+1);
-        adapt_state = PDR.ADAPT_seeds(rand_idx);
+        rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
+        adapt_state = PDR.ADAPT_state_list(rand_idx);
         PDR.ADAPT_state_seq(end+1)=rand_idx; % save state sequence
         CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
         CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
@@ -218,6 +218,8 @@ while(seekpos < TDT.npts_total_play)
             [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
         end
         % TEST TRIAL SCALE
+        test_left=zeros(1,PDR.buf_pts);
+        test_right=zeros(1,PDR.buf_pts);
         if(cnt==PDR.isi_buf)
             loc=PDR.TEST_loc_sequence(Signalcnt);
             if(loc~=0)
@@ -226,15 +228,13 @@ while(seekpos < TDT.npts_total_play)
                 test_right=TESTRIGHT(loc,:);
             else % not playing test sound in this trial!
                 signalScale=0;
-                test_left=zeros(1,PDR.buf_pts);
-                test_right=zeros(1,PDR.buf_pts);
             end
         end
         % SETUP ADAPTOR FOR TRIAL BUFFER
         if(cnt==PDR.isi_buf && PDR.flag_adapt>0)
             % initialize circular buffers & set new seed value
-            rand_idx=round((length(PDR.ADAPT_seeds)-1)*rand+1);
-            adapt_state = PDR.ADAPT_seeds(rand_idx);
+            rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
+            adapt_state = PDR.ADAPT_state_list(rand_idx);
             PDR.ADAPT_state_seq(end+1)=rand_idx; % save state sequence
             CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
             CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
@@ -338,7 +338,7 @@ function update_buffer(BUF_ID,adaptor,test,cnt,Signalcnt,signalScale)
 global PDR session
 S232('dropall');
 if(PDR.flag_adapt)
-    S232('pushf',adaptor,PDR.buf_pts); scale(PDR.ADAPT_scale);
+    S232('pushf',adaptor,PDR.buf_pts); S232('scale',PDR.ADAPT_scale);
     if(cnt==PDR.isi_buf)
         S232('qpushf',PDR.ADAPT_ramp); S232('mult');
     end
