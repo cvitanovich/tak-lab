@@ -176,12 +176,12 @@ while(seekpos < TDT.npts_total_play)
     if(record)
         % First Record Channel:
         ch=1; buf=1;
-        session.last_buffer=record_buffer(REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
+        session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
         session.test_flag=SignalPlayFlag;
         sessionPlots2('Update Trace Plot');
         % Second Record Channel:
         ch=2; buf=1;
-        record_buffer(REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
+        record_buffer(ch, REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
     end
     % PROCESSING TIME
     if(TDT.disp_proc_time)
@@ -254,12 +254,12 @@ while(seekpos < TDT.npts_total_play)
         if(record)
             % First Record Channel:
             ch=1; buf=2;
-            session.last_buffer=record_buffer(REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
+            session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
             session.test_flag=SignalPlayFlag;
             sessionPlots2('Update Trace Plot');
             % Second Record Channel:
             ch=2; buf=2;
-            record_buffer(REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
+            record_buffer(ch, REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
         end
         % UPDATE ISI COUNTER AND SIGNAL COUNT
         if(cnt==PDR.isi_buf)

@@ -1,4 +1,4 @@
-function [varargout]=record_buffer(REC_BUF,DEC_BUF,TDT,signal_flag,display_flag)
+function [varargout]=record_buffer(ch, REC_BUF,DEC_BUF,TDT,signal_flag,display_flag)
 % record buffers to file
 % ch -- recording channel (#1,#2,etc)
 % buf -- buffer indicator in record sequence (#1,#2,etc)
