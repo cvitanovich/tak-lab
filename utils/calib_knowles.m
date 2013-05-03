@@ -9,7 +9,7 @@ KNOWLES = struct(...
     'data_path','',...
     'filename',[]);
 
-if(ismac && strcmp(getenv('USER'),'cvitanovich'))
+if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
 else
     data_path='C:\andrew\pdr\data\';
