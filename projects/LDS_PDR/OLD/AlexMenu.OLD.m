@@ -42,7 +42,7 @@ function lead_pos_Callback(hObject, eventdata, handles)
 global PDR
 PDR.LEAD_pos = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.LEAD_pos));
-
+clear PDR
 refreshTrials;
 
 % LAG HABITUATING POSITION:
@@ -55,7 +55,7 @@ function lag_hab_pos_Callback(hObject, eventdata, handles)
 global PDR
 PDR.LAG_hab_pos = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.LAG_hab_pos));
-
+clear PDR
 refreshTrials;
 
 % TEST TRIAL SHIFT ANGLES:
@@ -78,11 +78,11 @@ if ~isempty(tmp2)
     return;
 end
 % okay to use these azumuths
-PDR.TEST_azimuths=tmp1
+PDR.TEST_azimuths=tmp1;
 set(hObject,'String',['[' num2str(PDR.TEST_azimuths) ']']);
 PDR.SOUNDS_azimuths=[PDR.LEAD_pos PDR.LAG_hab_pos PDR.TEST_azimuths];
 PDR.SOUNDS_azimuths=sort(PDR.SOUNDS_azimuths);
-
+clear PDR
 refreshTrials;
 
 % MIX PERCENT:
@@ -95,7 +95,7 @@ function mix_Callback(hObject, eventdata, handles)
 global PDR
 PDR.SOUNDS_mix=str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.SOUNDS_mix));
-
+clear PDR
 refreshSounds;
 
 % RANDOM NUMBER GENERATOR STATES:
@@ -108,7 +108,7 @@ function env_state_Callback(hObject, eventdata, handles)
 global PDR
 PDR.SOUNDS_states(1) = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.SOUNDS_states(1)));
-
+clear PDR
 refreshSounds;
 
 function decorr1_state_CreateFcn(hObject, eventdata, handles)
@@ -120,7 +120,7 @@ function decorr1_state_Callback(hObject, eventdata, handles)
 global PDR
 PDR.SOUNDS_states(2) = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.SOUNDS_states(2)));
-
+clear PDR
 refreshSounds;
 
 function decorr2_state_CreateFcn(hObject, eventdata, handles)
@@ -132,7 +132,7 @@ function decorr2_state_Callback(hObject, eventdata, handles)
 global PDR
 PDR.SOUNDS_states(3) = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.SOUNDS_states(3)));
-
+clear PDR
 refreshSounds;
 
 % SOUND LENGTH IN MS:
@@ -145,7 +145,7 @@ function len_sounds_Callback(hObject, eventdata, handles)
 global PDR
 PDR.SOUNDS_length = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.SOUNDS_length));
-
+clear PDR
 refreshSounds;
 
 % DELAY (ONGOING ENVELOPE DISPARITY):
@@ -158,7 +158,7 @@ function delay_Callback(hObject, eventdata, handles)
 global PDR
 PDR.SOUNDS_carrier_delay = str2double(get(hObject,'String'))
 set(hObject,'String',num2str(PDR.SOUNDS_carrier_delay));
-
+clear PDR
 refreshSounds;
 
 % RECORD TRACE CHECKBOX:
@@ -169,13 +169,13 @@ set(hObject,'Value',PDR.record);
 function record_Callback(hObject, eventdata, handles)
 global PDR
 PDR.record = get(hObject,'Value');
-
+clear PDR
 
 % TEST MAA FLAG:
 function test_maa_CreateFcn(hObject, eventdata, handles)
 global PDR
 set(hObject,'Value',PDR.maa_test_flag);
-
+clear PDR
 
 function test_maa_Callback(hObject, eventdata, handles)
 global PDR
@@ -186,7 +186,7 @@ if PDR.maa_test_flag
     PDR.filename=[PDR.filename(1:tmp(1)) 'MAAs' PDR.filename(tmp(2):end)];
     set(handles.session_fname,'String',PDR.filename);
 end
-
+clear PDR
 refreshTrials;
 refreshSounds;
 
@@ -200,7 +200,7 @@ function jitter_Callback(hObject, eventdata, handles)
 global PDR
 PDR.TEST_trial_jitter = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.TEST_trial_jitter));
-
+clear PDR
 refreshTrials;
 
 % NO. TEST TRIALS:
@@ -213,7 +213,7 @@ function n_test_trials_Callback(hObject, eventdata, handles)
 global PDR
 PDR.n_test_trials = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.n_test_trials));
-
+clear PDR
 refreshTrials;
 
 % FREQ. TEST TRIALS:
@@ -226,7 +226,7 @@ function freq_test_trials_Callback(hObject, eventdata, handles)
 global PDR
 PDR.TEST_trial_freq = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.TEST_trial_freq));
-
+clear PDR
 refreshTrials;
 
 % INTER-STIMULUS INTERVAL (Buffers):
@@ -257,7 +257,7 @@ function prehab_Callback(hObject, eventdata, handles)
 global PDR
 PDR.npretrials = str2double(get(hObject,'String'));
 set(hObject,'String',num2str(PDR.npretrials));
-
+clear PDR
 refreshTrials;
 
 % LENGTH OF SESSION:
@@ -279,7 +279,7 @@ set(hObject,'String',num2str(PDR.SOUNDS_SPL));
 % reload calib data and determine scales/attens
 % then update display
 calibSetup;
-
+clear PDR
 
 % SESSION FILENAME:
 function session_fname_CreateFcn(hObject, eventdata, handles)
@@ -291,7 +291,7 @@ function session_fname_Callback(hObject, eventdata, handles)
 global PDR
 PDR.filename = get(hObject,'String');
 set(hObject,'String',PDR.filename);
-
+clear PDR
 
 % BIRD ID:
 function bird_id_CreateFcn(hObject, eventdata, handles)
@@ -310,7 +310,7 @@ set(handles.session_fname,'String',num2str(PDR.filename));
 % reload calib data and determine scales/attens
 % then update display
 calibSetup;
-
+clear PDR
 
 % COMMENTS:
 function comments_CreateFcn(hObject, eventdata, handles)
@@ -322,7 +322,7 @@ function comments_Callback(hObject, eventdata, handles)
 global PDR
 PDR.comments = get(hObject,'String');
 set(hObject, 'String',PDR.comments);
-
+clear PDR
 
 % PLOT TRIALS:
 function plot_trials_CreateFcn(hObject, eventdata, handles)
@@ -337,7 +337,7 @@ sounds_handle=hObject;
 % REMIX BUTTON CALLBACK:
 function remix_Callback(hObject, eventdata, handles)
 global PDR
-
+clear PDR
 refreshTrials;
 
 % REFRESH TRIAL SEQUENCE:
@@ -378,6 +378,7 @@ plot(temp,lag_trialIDs(temp),'d','MarkerFaceColor',[0 1 0],'MarkerEdgeColor','no
 title('Trial Sequence')
 xlabel('Trial #','FontSize',8); ylabel('Azimuth (deg.)','FontSize',8);
 set(gca,'Color',[0 0 0]);
+clear PDR trials_handle
 
 
 % REFRESH SOUNDS:
@@ -426,7 +427,7 @@ calibSetup;
 function start_Callback(hObject, eventdata, handles)
 global PDR
 PDR.exit_flag = -1;
-
+clear PDR
 close(gcf)
 
 
@@ -434,7 +435,7 @@ close(gcf)
 function exit_Callback(hObject, eventdata, handles)
 global PDR
 PDR.exit_flag = 1;
-
+clear PDR
 close(gcf)
 
 
@@ -447,7 +448,7 @@ for i=1:10
     set(handles.menu_background,'Color',[0.75 0.75 0.75]);
     pause(0.1)
 end
-
+clear PDR
 
 
 % colors object backgrounds appropriately:

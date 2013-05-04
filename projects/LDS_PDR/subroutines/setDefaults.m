@@ -4,11 +4,12 @@ global PDR
 if(~ispc)
     code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/LDS_PDR/';
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
+    calib_path='/Users/cvitanovich/Documents/MATLAB/calib/';
 else
     code_path='c:\alex\code\LDS_PDR\';
     data_path='C:\alex\data\';
+    calib_path='C:\alex\calib_data\';
 end
-
 cd(code_path);
 
 PDR = struct(...                        % MAIN PARAMETERS:
@@ -63,6 +64,7 @@ PDR = struct(...                        % MAIN PARAMETERS:
     ...
     ...                                 % SOUND PARAMETERS:
     'CARRIERS_SWITCHED',0,...           % if the delay is negative this flag will be set to one! (LEAD <-> LAG carriers switched if one)
+    'SOUNDS_calib_path',calib_path,...  % path to files used for setting calibrated attens/scales
     'SOUNDS_rms',0.5,...                % setting envelopes to 0.5 rms amplitude (equalizes sound envelope magnitudes)
     'SOUNDS_radius',152,...                % the distance from the speakers to the owl's head position (in cm)
     'SOUNDS_calib_fname',[],...         % filename for speaker calibration parameters

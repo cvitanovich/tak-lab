@@ -31,7 +31,11 @@ switch options
         
         close all; % close all figures
         session.hFig=figure; whitebg(gcf,'k');
-        set(session.hFig,'renderer','OpenGL'); %use OpenGL for renderer
+        set(session.hFig,'MenuBar','none');
+        manual_fields(session.hFig);
+        set(session.hFig,'RendererMode','manual');
+        set(session.hFig,'ToolBar','none');
+        set(session.hFig,'Renderer','painters');
         set(session.hFig, 'Position', [0.17*screen_size(3) 0.04*screen_size(4) 0.8*screen_size(3) 0.90*screen_size(4)] );
         
         session.hSub(1)=subplot(3,7,[17:21]); hold on; % trial plot
@@ -40,6 +44,7 @@ switch options
         xlabel('Trial #'); ylabel(session.trial_param);
         title('Trial Sequence');
         %legend({'Habituating Stimulus','Test Stimuli'},-1);
+        set(gca,'DrawMode','fast');
         xlim([0 session.ntrials]); ylim([session.min_yes session.max_yes]);
         session.hBox=scatter(-1,10^6,30,'w','s');
         session.trialcnt=0; session.trialval=0;
@@ -60,7 +65,7 @@ switch options
         session.next_test_trial=[0 0];
         session.proc_time=[];
         
-        session.hSub(3)=subplot(3,7,[1:14]); cla; hold on; % trace plot
+        session.hSub(3)=subplot(3,7,[1:5 8:12]); cla; hold on; % trace plot
         set(session.hSub(3),'XtickLabel','');
         title('PDR Trace');
         session.decpts=ceil(session.bufpts/2^session.dec_fact);
@@ -77,11 +82,35 @@ switch options
         session.hLine=line([session.trace_xes session.trace_xes],...
             [session.trace_yes session.trace_yes],'LineWidth',1,'Color','w');
         xlim([0 session.trace_pts]); ylim([session.ymin session.ymax]);
+        set(gca,'DrawMode','fast');
         % initialize variable for latest buffer
         session.last_buffer=zeros(1,session.decpts);
         session.test_flag=0;
         session.flag_list=[];
         session.test_flag_list=[];
+        
+        session.hSub(4)=subplot(3,7,[6:7]); cla; % stim plot (left ch)
+        title('Left Ch.');
+        dur=1.1*(session.bufpts/session.Fs);
+        tes=0:(1/session.Fs):dur;
+        session.tes=tes(1:session.bufpts);
+        session.hStimLeft=line([session.tes session.tes],...
+            [zeros(1,session.bufpts) zeros(1,session.bufpts)],...
+            'LineWidth',1,'Color','b');
+        axis([tes(1) tes(end) -1.1 1.1]);
+        
+        set(gca,'DrawMode','fast');
+        
+        set(session.hSub(4),'XtickLabel','');
+        session.hSub(5)=subplot(3,7,[13:14]); cla; % stim plot (right ch)
+        title('Right Ch.');
+        session.hStimRight=line([session.tes session.tes],...
+            [zeros(1,session.bufpts) zeros(1,session.bufpts)],...
+            'LineWidth',1,'Color','g');
+        axis([tes(1) tes(end) -1.1 1.1]);
+        set(gca,'DrawMode','fast');
+        set(session.hSub(4),'XtickLabel','');
+        
         drawnow;
         
     case 'Update Trial Plot'
@@ -93,6 +122,7 @@ switch options
         
     case 'Update Session Info'
         % clear previous text
+        
         figure(session.hFig);
         subplot(session.hSub(2)); hold on;
         delete(session.hTxt(1)); session.hTxt(1)=0;
@@ -101,7 +131,7 @@ switch options
         if session.hTxt(4)~=0
             delete(session.hTxt(4)); session.hTxt(4)=0;
         end
-
+        
         % write new text
         session.txt{1}=sprintf('ELAPSED TIME:    %1.0f minutes   %4.2f seconds',...
             session.elapsed_time(1),session.elapsed_time(2));
@@ -117,11 +147,11 @@ switch options
             col='w';
         end
         session.hTxt(3) = text(.01,.5,session.txt(3),'FontSize',8,'Color',col);
-        if length(session.proc_time)>0
+        if(~isempty(session.proc_time))
             session.txt{4}=sprintf('Processing Time: %5.3f seconds',session.proc_time(end));
             session.hTxt(4) = text(.01,.3,session.txt(4),'FontSize',8);
         end
-        drawnow;
+        drawnow;        
         
         
     case 'Finish Session'
@@ -134,6 +164,7 @@ switch options
         drawnow;
         
     case 'Update Trace Plot'
+        
         figure(session.hFig);
         subplot(session.hSub(3)); hold on;
         % circular buffer update
@@ -192,8 +223,30 @@ switch options
         end
 
         drawnow; % only redraw plot when stimuli are played
-
-
+        
+    
+    case 'Update Stim Plot'
+        
+        
+        subplot(session.hSub(4));
+        set(session.hStimLeft,'ydata',[session.stim_left session.stim_left]);
+        subplot(session.hSub(5));
+        set(session.hStimRight,'ydata',[session.stim_right session.stim_right]);
+        % check for size issues
+        mL=max(abs(session.stim_left));
+        mR=max(abs(session.stim_right));
+        if(mL>32760 || mR>32760)
+            if(mL>32760)
+                set(session.hStimLeft,'Color','r');
+            else
+                set(session.hStimRight,'Color','r');
+            end
+            hWarn=warndlg(['Stimulus too big for TDT!!! MAX(ABS) = ' num2str(mBoth)]);
+            session.HALT=1; % halt session;
+        end
+        drawnow;
+        
+        
 end
 
 return;

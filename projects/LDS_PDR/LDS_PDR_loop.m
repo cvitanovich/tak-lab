@@ -32,7 +32,7 @@ TDT.max_signal_jitter=PDR.TEST_trial_jitter;
 TDT.disp_proc_time=1; % flag to display processing time for each buffer segment
 
 % speaker ID of habituating lag location:
-HAB_LOC=find(PDR.SOUNDS_azimuths==PDR.LAG_hab_pos);
+TDT.hab_loc_id=find(PDR.SOUNDS_azimuths==PDR.LAG_hab_pos);
 
 
 %% CHECK PARAMETERS
@@ -110,6 +110,12 @@ while(seekpos < TDT.npts_total_play)
         % update location
         loc=PDR.location_seq(Signalcnt);
         
+        % SELECT SOUND TOKENS FOR UPCOMING TRIAL:
+        rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
+        session.stim_left=PDR.LEAD_sounds{rove_id};
+        session.stim_right=PDR.LAG_sounds{rove_id};
+        sessionPlots('Update Stim Plot');
+        
         % TDT instructions for this buffer:
         if(~DEBUG)
             S232('dropall');
@@ -119,12 +125,11 @@ while(seekpos < TDT.npts_total_play)
             % set SS1 units
             switch_speaker(loc);
             
-            % select roved stimuli for buffer insertion
-            rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
-            S232('qpushf',PDR.LEAD_sounds{rove_id});
+            % load sound tokens into AP2 card for TDT play
+            S232('qpushf',session.stim_left);
             S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
             S232('qpop16',LEAD_PLAY(1));
-            S232('qpushf',PDR.LAG_sounds{rove_id});
+            S232('qpushf',session.stim_right);
             S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
             S232('qpop16',LAG_PLAY(1));
         end
@@ -155,7 +160,7 @@ while(seekpos < TDT.npts_total_play)
         ch=1; buf=1;
         session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
         if(SignalPlayFlag)
-            if(PDR.location_seq(Signalcnt)==HAB_LOC)
+            if(PDR.location_seq(Signalcnt)==TDT.hab_loc_id)
                 session.test_flag=1;
             else
                 session.test_flag=Inf;
@@ -173,14 +178,19 @@ while(seekpos < TDT.npts_total_play)
     % UPDATE SEEK POSITION
     seekpos = seekpos + PDR.buf_pts;
     
-    if(DEBUG)
-        pause(PDR.buf_pts/PDR.stim_Fs);
-    end
     % PROCESSING TIME
     if(TDT.disp_proc_time)
         t=toc;
         session.proc_time(end+1)=t;
         sessionPlots('Update Session Info');
+    end
+    
+    % CHECK FOR HALT
+    if(session.HALT==1 && session.confirm_halt==0)
+        confirmdlg;
+    end
+    if(session.HALT==1 && session.confirm_halt==1)
+        seekpos=Inf;
     end
     
     if(seekpos<TDT.npts_total_play)
@@ -215,22 +225,28 @@ while(seekpos < TDT.npts_total_play)
             % update location
             loc=PDR.location_seq(Signalcnt);
             
+            % SELECT SOUND TOKENS FOR UPCOMING TRIAL:
+            rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
+            session.stim_left=PDR.LEAD_sounds{rove_id};
+            session.stim_right=PDR.LAG_sounds{rove_id};
+            sessionPlots('Update Stim Plot');
+            
             % TDT instructions for this buffer:
             if(~DEBUG)
                 S232('dropall');
                 S232('PA4atten',1,PDR.SOUNDS_lead_attens(loc-1)); % lead channel
                 S232('PA4atten',2,0); % lag ch
+                
                 % set SS1 units
                 switch_speaker(loc);
                 
-                % select roved stimuli for buffer insertion
-                rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
-                S232('qpushf',PDR.LEAD_sounds{rove_id});
+                % load sound tokens into AP2 card for TDT play
+                S232('qpushf',session.stim_left);
                 S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
-                S232('qpop16',BUF_A2);
-                S232('qpushf',PDR.LAG_sounds{rove_id});
+                S232('qpop16',LEAD_PLAY(2));
+                S232('qpushf',session.stim_right);
                 S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
-                S232('qpop16',BUF_B2);
+                S232('qpop16',LAG_PLAY(2));
             end
             
             % plot a marker on trial sequence plot
@@ -258,7 +274,7 @@ while(seekpos < TDT.npts_total_play)
             ch=1; buf=2;
             session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
             if(SignalPlayFlag)
-                if(PDR.location_seq(Signalcnt)==HAB_LOC)
+                if(PDR.location_seq(Signalcnt)==TDT.hab_loc_id)
                     session.test_flag=1;
                 else
                     session.test_flag=Inf;
@@ -292,20 +308,33 @@ while(seekpos < TDT.npts_total_play)
             sessionPlots('Update Session Info');
         end
         
-        if(DEBUG)
-            pause(PDR.buf_pts/PDR.stim_Fs);
-        end
-        
         if(Signalcnt>TDT.ntrials); break; end;
         
-    end; % end second buffer segment
+        % CHECK FOR HALT
+        if(session.HALT==1 && session.confirm_halt==0)
+            confirmdlg;
+        end
+        if(session.HALT==1 && session.confirm_halt==1)
+            seekpos=Inf;
+        end
+       
+            
+    end% end second buffer segment
     
 end
+
+
 
 %% WAIT FOR LAST BUFFERS TO FINISH
 if(~DEBUG)
     while(S232('playseg',TDT.din)==LAG_PLAY(2) || S232('playseg',TDT.din)==LEAD_PLAY(2)); end;
     TDT_flush;
+end
+
+if(session.HALT==1)
+    disp('HALTING EARLY!!!');
+    session.hHalt=warndlg('Halting Early!!!');
+    uiwait(session.hHalt)
 end
 
 %% SUBROUTINES
@@ -326,7 +355,7 @@ function cntdown=update_countdown(cnt,Signalcnt)
 global PDR TDT
 cntdown=(PDR.isi_buf-cnt)*(PDR.buf_pts*(TDT.srate/1e6));
 for(j=1:(PDR.ntrials-Signalcnt))
-    if(PDR.location_seq(j+Signalcnt)~=PDR.hab_loc_id)
+    if(PDR.location_seq(j+Signalcnt)~=TDT.hab_loc_id)
         break;
     else
         cntdown=cntdown+(PDR.isi_buf+1)*(PDR.buf_pts*TDT.srate/1e6);
@@ -353,6 +382,31 @@ else
 end
 S232('SS1mode',ss_id,'QUAD_2_1');
 S232('SS1select',ss_id,out_port,1);
+
+function confirmdlg
+global session
+% dialog box to confirm a choice
+session.Confirm_txt=uicontrol('Tag','confirm_txt','Style', 'text','String','Sure???',...
+    'Units','normalized','FontSize',14,'Position',[0.02 0.5 0.05 0.05],...
+    'BackgroundColor','w','ForegroundColor','k');
+% buttons
+figure(session.hFig); hold on;
+yes='session.confirm_halt=1; session.HALT=1; drawnow;';
+nope='session.confirm_halt=0; session.HALT=0;';
+nope=[nope ' h=findobj(''Tag'',''confirm''); h2=findobj(''Tag'',''confirm_txt'');'];
+nope=[nope ' delete(h); delete(h2);'];
+nope=[nope ' set(session.HALT_btn,''String'',''HALT'');'];
+nope=[nope ' set(session.HALT_btn,''BackgroundColor'',''r'');'];
+nope=[nope ' set(session.HALT_btn,''ForegroundColor'',''y'');'];
+nope=[nope ' set(session.HALT_btn,''Callback'',''session.HALT=1;''); drawnow;'];
+set(session.HALT_btn,'String','NO!',...
+    'Units','normalized','FontSize',14,'Position',[0.02 0.4 0.05 0.05],...
+    'BackgroundColor','w','ForegroundColor','k',...
+    'Callback', nope);
+session.Confirm_btn=uicontrol('Tag','confirm','Style', 'pushbutton','String','YES!',...
+    'Units','normalized','FontSize',14,'Position',[0.02 0.3 0.05 0.05],...
+    'BackgroundColor','w','ForegroundColor','k',...
+    'Callback', yes);
 
 function out=check_params
 global TDT PDR HRTF

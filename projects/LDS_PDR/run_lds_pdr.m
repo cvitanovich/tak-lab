@@ -27,6 +27,10 @@ global PDR % variables used in the experiment must be global so that all the fun
 
 if strcmp(button,'RUN EXPERIMENT')
     % NOTE: sounds and trial sequence setup taken care of in AlexMenu.m
+    % INITIAL SETUP OF DEFAULTS AND TRIAL SEQUENCE:
+    setDefaults; % sets default values for running a session
+    PDR.exit_flag=1; % defaults to one
+    calcSessionLen;
     H = AlexMenu;
     uiwait(H)
 elseif strcmp(button,'TEST EQUIPMENT')
@@ -34,7 +38,7 @@ elseif strcmp(button,'TEST EQUIPMENT')
     setDefaults; % sets default values for running a session
     calcSessionLen;
     speakerTestSetup;
-    PDR.exit_flag == 0;
+    PDR.exit_flag = 0;
 end
 
 if PDR.exit_flag == -1
@@ -139,17 +143,25 @@ tmp=find(PDR.LAG_sounds{1}~=0);
 session.sound_onset=tmp(1); % how many points until sound onset?
 session.npts_totalplay=PDR.npts_totalplay;
 session.srate=(10^6)*(1/PDR.stim_Fs); % sampling period in usec
+session.Fs=PDR.stim_Fs;
 session.stim_fs=PDR.stim_Fs;
 session.zoomval=0.4;
+session.HALT=0; % for halting the session early
+session.confirm_halt=0; % extra safeguard for halting session
+
 % requires session to be declared a global
 sessionPlots('Initialize');
 hold on;
-uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
+session.ZoomOut_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.6 0.05 0.05],...
     'Callback', 'if session.zoomval<2.1; session.zoomval=session.zoomval+0.1; end;');
-uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
+session.ZoomIn_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.8 0.05 0.05],...
     'Callback', 'if session.zoomval>0.1; session.zoomval=session.zoomval-0.1; end;');
+session.HALT_btn=uicontrol(gcf,'Style','pushbutton','Tag','HALT','String','HALT!',...
+    'Units','normalized','FontSize',14,'Position',[0.02 0.4 0.05 0.05],...
+    'BackgroundColor','r','ForegroundColor','y',...
+    'Callback', 'session.HALT=1;');
 % required to initialize sessionPlots:
 % structure with these parameters:
 % hab_xes, hab_yes, trial_xes, trial_yes
@@ -189,7 +201,7 @@ diary off;
 
 % run session!
 % NEW DOUBLE BUFFERED LOOP CODE (MATLAB ONLY)
-LDS_PDR_loop;
+lds_pdr_loop;
 
 % HAVING ISSUES WITH USING THIS C CODE:
 % play2_record2D2_alex7(passmein, single(LEAD_sounds), single(LAG_sounds),...
