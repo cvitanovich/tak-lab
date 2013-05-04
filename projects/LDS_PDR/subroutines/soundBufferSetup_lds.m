@@ -1,4 +1,4 @@
-function soundBufferSetup
+function soundBufferSetup_lds()
 global PDR
 
 for i0=1:PDR.SOUNDS_num_carriers

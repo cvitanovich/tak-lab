@@ -91,11 +91,11 @@ switch options
         
         session.hSub(4)=subplot(3,7,[6:7]); cla; % stim plot (left ch)
         title('Left Ch.');
-        dur=1.1*(session.bufpts/session.Fs);
+        dur=1.1*(session.stim_pts/session.Fs);
         tes=0:(1/session.Fs):dur;
-        session.tes=tes(1:session.bufpts);
+        session.tes=tes(1:session.stim_pts);
         session.hStimLeft=line([session.tes session.tes],...
-            [zeros(1,session.bufpts) zeros(1,session.bufpts)],...
+            [zeros(1,session.stim_pts) zeros(1,session.stim_pts)],...
             'LineWidth',1,'Color','b');
         axis([tes(1) tes(end) -1.1 1.1]);
         
@@ -105,7 +105,7 @@ switch options
         session.hSub(5)=subplot(3,7,[13:14]); cla; % stim plot (right ch)
         title('Right Ch.');
         session.hStimRight=line([session.tes session.tes],...
-            [zeros(1,session.bufpts) zeros(1,session.bufpts)],...
+            [zeros(1,session.stim_pts) zeros(1,session.stim_pts)],...
             'LineWidth',1,'Color','g');
         axis([tes(1) tes(end) -1.1 1.1]);
         set(gca,'DrawMode','fast');
@@ -124,21 +124,15 @@ switch options
         % clear previous text
         
         figure(session.hFig);
-        subplot(session.hSub(2)); hold on;
-        delete(session.hTxt(1)); session.hTxt(1)=0;
-        delete(session.hTxt(2)); session.hTxt(2)=0;
-        delete(session.hTxt(3)); session.hTxt(3)=0;
-        if session.hTxt(4)~=0
-            delete(session.hTxt(4)); session.hTxt(4)=0;
-        end
+        subplot(session.hSub(2));
         
         % write new text
         session.txt{1}=sprintf('ELAPSED TIME:    %1.0f minutes   %4.2f seconds',...
             session.elapsed_time(1),session.elapsed_time(2));
-        session.hTxt(1) = text(.01,.9,session.txt(1),'FontSize',8);
+        set(session.hTxt(1),'String',session.txt{1});
         session.txt{2}=sprintf('REMAINING TIME:  %1.0f minutes   %4.2f seconds',...
             session.rem_time(1),session.rem_time(2));
-        session.hTxt(2) = text(.01,.7,session.txt(2),'FontSize',8); 
+        set(session.hTxt(2),'String',session.txt{2});
         session.txt{3}=sprintf('NEXT TEST TRIAL: %1.0f minutes   %4.2f seconds',...
             session.next_test_trial(1),session.next_test_trial(2));
         if session.next_test_trial(1)==0 && session.next_test_trial(2)<2
@@ -146,10 +140,10 @@ switch options
         else
             col='w';
         end
-        session.hTxt(3) = text(.01,.5,session.txt(3),'FontSize',8,'Color',col);
+        set(session.hTxt(3),'String',session.txt{3},'Color',col);
         if(~isempty(session.proc_time))
             session.txt{4}=sprintf('Processing Time: %5.3f seconds',session.proc_time(end));
-            session.hTxt(4) = text(.01,.3,session.txt(4),'FontSize',8);
+            set(session.hTxt(4),'String',session.txt{4});
         end
         drawnow;        
         

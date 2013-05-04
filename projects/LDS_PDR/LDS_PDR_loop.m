@@ -49,7 +49,6 @@ signalScale=0;
 record=(TDT.nRecChannels>0);
 cnt=1; % ISI counter
 
-
 if(~DEBUG) % for debugging without the TDT
     %% INITIALIZE TDT
     out=TDT_init;
@@ -77,6 +76,7 @@ if(~DEBUG) % for debugging without the TDT
     init_sequenced_play(TDT);
 end
 
+
 %% MAIN LOOP
 seekpos=0;
 while(seekpos < TDT.npts_total_play)
@@ -85,7 +85,7 @@ while(seekpos < TDT.npts_total_play)
         while(check_play(TDT.nPlayChannels,[LEAD_PLAY(1) LAG_PLAY(1)])); end;
     end
     
-    tic;
+    
     % SET FLAGS
     SignalPlayFlag=0;
     if(signalScale>0);
@@ -100,8 +100,10 @@ while(seekpos < TDT.npts_total_play)
     % DISPLAY SESSION INFO
     disp_session_info(cntdown,seekpos);
     
+    tic
     % re-loading #1 playbuffers ... LEAD to chanA and LAG to chanB
     if(cnt==PDR.isi_buf) % stimulus trial
+        
         % jitter trial presentation
         cnt=0;
         if(TDT.max_signal_jitter > 0)
@@ -118,7 +120,7 @@ while(seekpos < TDT.npts_total_play)
         
         % TDT instructions for this buffer:
         if(~DEBUG)
-            S232('dropall');
+            
             S232('PA4atten',1,PDR.SOUNDS_lead_attens(loc-1)); % lead channel
             S232('PA4atten',2,0); % lag ch
             
@@ -126,12 +128,19 @@ while(seekpos < TDT.npts_total_play)
             switch_speaker(loc);
             
             % load sound tokens into AP2 card for TDT play
-            S232('qpushf',session.stim_left);
+            S232('dropall');
+            S232('pushf',session.stim_left,PDR.stim_pts);
+            S232('dpush',PDR.buf_pts-PDR.stim_pts);
+            S232('value',0);
+            S232('cat');
             S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
             S232('qpop16',LEAD_PLAY(1));
-            S232('qpushf',session.stim_right);
+            S232('pushf',session.stim_right,PDR.stim_pts);
+            S232('dpush',PDR.buf_pts-PDR.stim_pts);
+            S232('value',0);
+            S232('cat');
             S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
-            S232('qpop16',LAG_PLAY(1));
+            S232('qpop16',LEAD_PLAY(1));
         end
         
         % plot a marker on trial sequence plot
@@ -142,9 +151,11 @@ while(seekpos < TDT.npts_total_play)
         Signalcnt=Signalcnt+1;
         
     else	% no stimulus
+        
         signalScale = 0;
         cnt=cnt+1; % increment ISI count
         if(~DEBUG)
+            S232('dropall');
             S232('dpush',PDR.buf_pts);
             S232('value',0);
             S232('qpop16',LEAD_PLAY(1));
@@ -154,11 +165,12 @@ while(seekpos < TDT.npts_total_play)
         end
     end
     
+    
     % RECORD PDR TRACE
     if(record && ~DEBUG)
         % First Record Channel:
         ch=1; buf=1;
-        session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
+        session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),TDT,SignalPlayFlag,TDT.display_flag);
         if(SignalPlayFlag)
             if(PDR.location_seq(Signalcnt)==TDT.hab_loc_id)
                 session.test_flag=1;
@@ -171,8 +183,7 @@ while(seekpos < TDT.npts_total_play)
         sessionPlots('Update Trace Plot');
         % Second Record Channel:
         ch=2; buf=1;
-        record_buffer(ch, REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
-        S232('dropall');
+        record_buffer(ch, REC_B(buf),DEC_B(buf),TDT,SignalPlayFlag,0);
     end
     
     % UPDATE SEEK POSITION
@@ -200,7 +211,7 @@ while(seekpos < TDT.npts_total_play)
             while(check_play(TDT.nPlayChannels,[LEAD_PLAY(2) LAG_PLAY(2)])); end;
         end
         
-        tic;
+        
         % SET FLAGS
         SignalPlayFlag=0;
         if(signalScale>0);
@@ -215,8 +226,10 @@ while(seekpos < TDT.npts_total_play)
         % DISPLAY SESSION INFO
         disp_session_info(cntdown,seekpos);
         
+        tic
         % re-loading #1 playbuffers ... LEAD to chanA and LAG to chanB
         if(cnt==PDR.isi_buf) % stimulus trial
+            
             % jitter trial presentation
             cnt=0;
             if(TDT.max_signal_jitter > 0)
@@ -233,7 +246,7 @@ while(seekpos < TDT.npts_total_play)
             
             % TDT instructions for this buffer:
             if(~DEBUG)
-                S232('dropall');
+                
                 S232('PA4atten',1,PDR.SOUNDS_lead_attens(loc-1)); % lead channel
                 S232('PA4atten',2,0); % lag ch
                 
@@ -241,12 +254,21 @@ while(seekpos < TDT.npts_total_play)
                 switch_speaker(loc);
                 
                 % load sound tokens into AP2 card for TDT play
-                S232('qpushf',session.stim_left);
+                S232('dropall');
+                S232('pushf',session.stim_left,PDR.stim_pts);
+                S232('dpush',PDR.buf_pts-PDR.stim_pts);
+                S232('value',0);
+                S232('cat');
                 S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
                 S232('qpop16',LEAD_PLAY(2));
-                S232('qpushf',session.stim_right);
+                S232('dropall');
+                S232('pushf',session.stim_right,PDR.stim_pts);
+                S232('dpush',PDR.buf_pts-PDR.stim_pts);
+                S232('value',0);
+                S232('cat');
                 S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
-                S232('qpop16',LAG_PLAY(2));
+                S232('qpop16',LEAD_PLAY(2));
+                S232('dropall');
             end
             
             % plot a marker on trial sequence plot
@@ -257,22 +279,26 @@ while(seekpos < TDT.npts_total_play)
             Signalcnt=Signalcnt+1;
             
         else	% no stimulus
+            
             signalScale = 0; cnt=cnt+1;
             if(~DEBUG)
+                S232('dropall');
                 S232('dpush',PDR.buf_pts);
                 S232('value',0);
-                S232('qpop16',BUF_A2);
+                S232('qpop16',LEAD_PLAY(2));
                 S232('dpush',PDR.buf_pts);
                 S232('value',0);
-                S232('qpop16',BUF_B2);
+                S232('qpop16',LAG_PLAY(2));
+                S232('dropall');
             end
         end
+        
         
         % RECORD PDR TRACE
         if(record && ~DEBUG)
             % First Record Channel:
             ch=1; buf=2;
-            session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),SignalPlayFlag,TDT.display_flag);
+            session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),TDT,SignalPlayFlag,TDT.display_flag);
             if(SignalPlayFlag)
                 if(PDR.location_seq(Signalcnt)==TDT.hab_loc_id)
                     session.test_flag=1;
@@ -285,8 +311,7 @@ while(seekpos < TDT.npts_total_play)
             sessionPlots('Update Trace Plot');
             % Second Record Channel:
             ch=2; buf=2;
-            record_buffer(ch, REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
-            S232('dropall');
+            record_buffer(ch, REC_B(buf),DEC_B(buf),TDT,SignalPlayFlag,0);
         end
         
         % UPDATE SEEK POSITION
@@ -295,8 +320,14 @@ while(seekpos < TDT.npts_total_play)
         % CHECK IF CORRECT BUFFERS ARE PLAYING
         if(~DEBUG)
             if(~check_play(TDT.nPlayChannels,[LEAD_PLAY(1) LAG_PLAY(1)]))
-                disp(sprintf('Got %.2f percentof the way',seekpos/TDT.npts_total_play));
-                disp('APcard too slow? or outFNs incorrect?');
+                str=[];
+                for(k=1:TDT.nPlayChannels)
+                    p=S232('playseg',k);
+                    str=[str 'Ch ' num2str(k) ' playing buffer ' num2str(p) ' '];
+                end
+                disp(str);
+                disp(sprintf('Got %.2f percent of the way',seekpos/TDT.npts_total_play));
+                disp('APcard too slow? Or outFNs incorrect?');
                 break;
             end
         end
@@ -328,7 +359,7 @@ end
 %% WAIT FOR LAST BUFFERS TO FINISH
 if(~DEBUG)
     while(S232('playseg',TDT.din)==LAG_PLAY(2) || S232('playseg',TDT.din)==LEAD_PLAY(2)); end;
-    TDT_flush;
+    TDT_flush(TDT);
 end
 
 if(session.HALT==1)
@@ -365,7 +396,7 @@ end
 function out=check_play(nPlayChannels,BUFFERS)
 out=true;
 for ch=1:nPlayChannels
-    if(S232('playseg',ch)~=BUFFERS(ch))
+    if(S232('playseg',(ch))~=BUFFERS(ch))
         out=false; % error
     end
 end

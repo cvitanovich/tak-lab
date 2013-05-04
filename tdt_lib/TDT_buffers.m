@@ -44,7 +44,8 @@ TDT.play_spec=1; S232('allot16',TDT.play_spec,(TDT.nPlayChannels+1));
 % ALLOT PLAY CHANNEL SEQUENCE BUFFERS
 TDT.ch_seq=2:(TDT.nPlayChannels+1);
 for ch=1:length(TDT.ch_seq)
-	S232('allot16',TDT.ch_seq(ch),(TDT.nPlayChannels+1));
+    nbuffers=length(TDT.playpts{1});
+	S232('allot16',TDT.ch_seq(ch),(nbuffers*2+1));
 end
 
 % ALLOT PLAY BUFFERS
@@ -77,16 +78,15 @@ S232('qpop16',TDT.play_spec);
 % PLAY SEQUENCES
 for ch=1:TDT.nPlayChannels
     nbuffers=length(TDT.playpts{ch});
-	S232('dpush',(nbuffers*2+1));
+    npts=(nbuffers*2+1);
+	S232('dpush',npts);
 	S232('value',0);
-	cnt=0;
+    play_seq=[];
 	for buf=1:nbuffers
-		S232('make',cnt,TDT.stim_buffers{ch}(buf));
-		cnt=cnt+1;
-		S232('make',cnt,1);
-		cnt=cnt+1;
+		play_seq(end+1:end+2)=[TDT.stim_buffers{ch}(buf) 1];
 	end
-	S232('make',cnt,0);
+    play_seq(end+1)=0;
+    s232('pushf',play_seq,npts);
 	S232('qpop16',TDT.ch_seq(ch));
 end
 
@@ -100,7 +100,8 @@ if(TDT.nRecChannels>0)
     N=N+2;
 	TDT.rec_ch_seq=N:(N + TDT.nRecChannels - 1);
 	for ch=1:length(TDT.rec_ch_seq)
-		S232('allot16',TDT.rec_ch_seq(ch),(TDT.nRecChannels+N+1));
+        nbuffers=length(TDT.recpts{ch});
+		S232('allot16',TDT.rec_ch_seq(ch),(nbuffers*2+1));
 	end
 
 	% recording buffer sequence
@@ -120,9 +121,6 @@ if(TDT.nRecChannels>0)
         end
     end
     N=TDT.rec_buffers{TDT.nRecChannels}(end);
-    
-    
-    
     
     if(TDT.dec_factor>0) % decimating?
         % decimated record buffers
@@ -156,16 +154,15 @@ if(TDT.nRecChannels>0)
 	% record sequences for each recording channel
 	for ch=1:TDT.nRecChannels
         nbuffers=length(TDT.recpts{ch});
-		S232('dpush',(nbuffers*2+1));
-		S232('value',0);
-		cnt=0;
-		for buf=1:nbuffers
-			S232('make',cnt,TDT.rec_buffers{ch}(buf));
-			cnt=cnt+1;
-			S232('make',cnt,1);
-			cnt=cnt+1;
-		end
-		S232('make',cnt,0);
+        npts=(nbuffers*2+1);
+		S232('dpush',npts);
+        S232('value',0);
+        rec_seq=[];
+        for buf=1:nbuffers
+            rec_seq(end+1:end+2)=[TDT.rec_buffers{ch}(buf) 1];
+        end
+        rec_seq(end+1)=0;
+        s232('pushf',rec_seq,npts);
 		S232('qpop16',TDT.rec_ch_seq(ch));
 	end
 end

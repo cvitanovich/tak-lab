@@ -1,4 +1,4 @@
-function calcSessionLen()
+function calcSessionLen_lds()
 global PDR
 % calculate length of session:
 tmp = (PDR.npretrials + PDR.TEST_trial_freq*PDR.n_test_trials)...

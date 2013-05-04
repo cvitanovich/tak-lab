@@ -1,4 +1,4 @@
-function setupTrials()
+function setupTrials_lds()
 global PDR
 
 %disp('Setting up Trial Sequence')
@@ -18,7 +18,7 @@ separations=PDR.TEST_azimuths - PDR.LAG_hab_pos;
 outlier_IDs=find(abs(separations)>=PDR.outlier_separation);
 not_outlier_IDs=find(abs(separations)<PDR.outlier_separation);
 rep_freq=5; % don't repeat an outlier speaker location less than 7 test trials apart
-rand_list = randomized_trials(not_outlier_IDs,outlier_IDs,PDR.n_outlier_trials,PDR.n_test_trials,rep_freq);
+rand_list = randomized_trials_lds(not_outlier_IDs,outlier_IDs,PDR.n_outlier_trials,PDR.n_test_trials,rep_freq);
 
 last_test=NaN;
 if length(rand_list) == 0

@@ -1,4 +1,4 @@
-function setDefaults()
+function setDefaults_lds()
 global PDR
 
 if(~ispc)
@@ -6,14 +6,14 @@ if(~ispc)
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
     calib_path='/Users/cvitanovich/Documents/MATLAB/calib/';
 else
-    code_path='c:\alex\code\LDS_PDR\';
+    code_path='C:\andrew\CORE\tak-lab\projects\LDS_PDR\'; %'c:\alex\code\LDS_PDR\';
     data_path='C:\alex\data\';
     calib_path='C:\alex\calib_data\';
 end
 cd(code_path);
 
 PDR = struct(...                        % MAIN PARAMETERS:
-    'DEBUG',1,...
+    'DEBUG',0,...
     'bird_id',1073,...                  % bird's id #
     'info_pts',2,...                    % first 2 points in the (decimated) buffer reserved for trial info
     ...                                 % for example, if testing MAAs a comment should go here
@@ -24,12 +24,13 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'ntrials',[],...                   % no. of trials in a session
     'npretrials',100,...                 % default # of habituating trials before the 1st test trial
     'n_test_trials',15,...              % default # of test trials in a session
-    'buf_pts',32768,...                 % # points in a buffer - 32768 pts for a 0.671 second buffer (Fs = 48828 Hz)
+    'stim_pts',[],...                   % number of pts in the stimulus vector (calculated)
+    'buf_pts',30000,...                 % # points in a buffer - 32768 pts for a 0.671 second buffer (Fs = 48828 Hz)
     'buf_dur',[],...                    % buffer duration in ms
-    'isi_buf',15,...                     % number of empty buffers between trials (10 buffers gives an ISI of ~6.71s (+/-1.34 s) using .671 sec sounds)
+    'isi_buf',10,...                     % number of empty buffers between trials (10 buffers gives an ISI of ~6.71s (+/-1.34 s) using .671 sec sounds)
     'isi_time',[],...                   % time between trial buffers in seconds (calculated)
-    'decimationfactor',5,...            % decimation factor for data collection (using 4 will give 1875Hz sampling rate)
-    'stim_Fs',48828,...                 % sampling rate for sound production
+    'decimationfactor',4,...            % decimation factor for data collection (using 4 will give 1875Hz sampling rate)
+    'stim_Fs',30000,...                 % sampling rate for sound production
     'npts_totalplay',[],...            % total no. pts in the session
     'len_session',[nan nan], ...               % length of session (in minutes)
     'starttime',[], ...                 % session start time

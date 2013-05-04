@@ -21,6 +21,7 @@ end
 
 function AlexMenu_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
+set(gcf,'Position',[.03 .08 .95 .9]);
 % Update handles structure
 guidata(hObject, handles);
 % UIWAIT makes AlexMenu wait for user response (see UIRESUME)
@@ -263,7 +264,7 @@ refreshTrials;
 % LENGTH OF SESSION:
 function len_session_CreateFxn(hObject, eventdata, handles)
 global PDR
-calcSessionLen;
+calcSessionLen_lds;
 set(hObject,'String',num2str(PDR.len_session));
 
 % SPL SELECTION:
@@ -343,8 +344,8 @@ refreshTrials;
 % REFRESH TRIAL SEQUENCE:
 function refreshTrials
 global PDR trials_handle
-setupTrials;
-calcSessionLen;
+setupTrials_lds;
+calcSessionLen_lds;
 handles = guihandles(gcf);
 sec=num2str(PDR.len_session(2));
 if length(sec)==1
@@ -391,10 +392,9 @@ end
 set(handles.correlation_display_box,'String',num2str(mean(temp)));
 axes(sounds_handle);
 set(gca,'FontSize',8);
-soundBufferSetup;
 hold off;
-tmp = find(PDR.LAG_sounds{1}~=0);
-start = tmp(1); stop=tmp(end);
+start = 1; stop=length(PDR.LAG_sounds{1});
+PDR.stim_pts=length(PDR.LAG_sounds{1});
 xes = 0:(1/1000):2*PDR.SOUNDS_length;
 xes = 1000*xes;
 
@@ -426,7 +426,6 @@ calibSetup;
 function start_Callback(hObject, eventdata, handles)
 global PDR
 PDR.exit_flag = -1;
-
 close(gcf)
 
 
@@ -434,7 +433,6 @@ close(gcf)
 function exit_Callback(hObject, eventdata, handles)
 global PDR
 PDR.exit_flag = 1;
-
 close(gcf)
 
 
@@ -462,7 +460,7 @@ function calibSetup
 global PDR
 handles=guihandles(gcf);
 % load and read calibration data... set scales/attens
-readCalibFiles;
+readCalibFiles_lds;
 
 if(PDR.DEBUG)
     PDR.SOUNDS_calib_fnames{1}='DEBUG_MODE';

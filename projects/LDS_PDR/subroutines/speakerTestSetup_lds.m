@@ -1,4 +1,4 @@
-function speakerTestSetup
+function speakerTestSetup_lds()
 global PDR
 % PARAMS
 
@@ -43,7 +43,7 @@ end
 % setup rove sequence:
 num_snds=PDR.SOUNDS_num_carriers;
 PDR.SOUNDS_rove_sequence = ceil(num_snds-num_snds*rand(1,ntrials+1));
-calcSessionLen;
+calcSessionLen_lds;
 sec=num2str(PDR.len_session(2));
 if length(sec)==1
     sec=['0' sec];
@@ -57,6 +57,6 @@ h=msgbox(['Testing equipment will take: ' minutes ' minutes & ' sec ' seconds'])
 uiwait(h);
 % MAKE SOUND TOKENS:
 AMStim; % calculate lead lag sounds using correlation and state values (for reproducible sounds)
-soundBufferSetup;
+soundBufferSetup_lds;
 % SETUP CALIBRATED SCALES & ATTENS:
-readCalibFiles;
+readCalibFiles_lds;

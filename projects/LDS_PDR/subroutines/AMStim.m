@@ -15,7 +15,7 @@ order=2;
 SR = PDR.stim_Fs;
 % Increase duration by delay
 % so that the stimuli can be gated/windowed (see below)
-StimDur = PDR.SOUNDS_length + PDR.SOUNDS_carrier_delay; % should be in ms, add delay
+StimDur = PDR.SOUNDS_length + abs(PDR.SOUNDS_carrier_delay); % should be in ms, add delay
 
 %for sound generation (creates extended BBN that is then curtailed to
 %the desired duration)
@@ -28,7 +28,7 @@ else
 end
 
 StimPnts = round((StimDur/1000)*SR);
-DelayPnts = round((PDR.SOUNDS_carrier_delay/1000)*SR);
+DelayPnts = round((abs(PDR.SOUNDS_carrier_delay)/1000)*SR);
 DelayPnts = max(1,DelayPnts);
 
 numsnds=length(PDR.SOUNDS_rand_states);
@@ -94,14 +94,15 @@ for i0=1:numsnds
     % window (i.e., gate) out onset/offset time disparity
     % DO NOT SHIFT ENVELOPES!!! (only carriers have a delay)
     if(PDR.SOUNDS_carrier_delay>=0)
-        Noise1 = Noise1(DelayPnts:StimPnts);
-        Noise2 = Noise2(DelayPnts:StimPnts);
+        N1 = Noise1(DelayPnts:StimPnts);
+        N2 = Noise2(DelayPnts:StimPnts);
     else
         PDR.CARRIERS_SWITCHED=1;
-        Noise2 = Noise1(DelayPnts:StimPnts);
-        Noise1 = Noise2(DelayPnts:StimPnts);
+        N2 = Noise1(DelayPnts:StimPnts);
+        N1 = Noise2(DelayPnts:StimPnts);
     end
-        
+    Noise1=N1;
+    Noise2=N2;
     % Fix envelope points to match carriers!
     Env1DC = Env1DC(1:length(Noise1));
     Env2DC = Env2DC(1:length(Noise2));

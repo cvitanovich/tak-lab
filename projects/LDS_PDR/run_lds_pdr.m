@@ -28,16 +28,16 @@ global PDR % variables used in the experiment must be global so that all the fun
 if strcmp(button,'RUN EXPERIMENT')
     % NOTE: sounds and trial sequence setup taken care of in AlexMenu.m
     % INITIAL SETUP OF DEFAULTS AND TRIAL SEQUENCE:
-    setDefaults; % sets default values for running a session
+    setDefaults_lds; % sets default values for running a session
     PDR.exit_flag=1; % defaults to one
-    calcSessionLen;
+    calcSessionLen_lds;
     H = AlexMenu;
     uiwait(H)
 elseif strcmp(button,'TEST EQUIPMENT')
     % INITIAL SETUP OF DEFAULTS AND TRIAL SEQUENCE:
-    setDefaults; % sets default values for running a session
-    calcSessionLen;
-    speakerTestSetup;
+    setDefaults_lds; % sets default values for running a session
+    calcSessionLen_lds;
+    speakerTestSetup_lds;
     PDR.exit_flag = 0;
 end
 
@@ -90,24 +90,6 @@ if PDR.virtual
 else
     type='frf';
 end
-passmein.FN1=[PDR.filename '_REC1.' type];
-passmein.FN2=[PDR.filename '_REC2.' type];
-passmein.record = PDR.record;
-passmein.n_trials = uint16(PDR.ntrials);
-passmein.latten = 0; % not using a base attenuation
-passmein.ratten = 0; % not using a base attenuation
-passmein.decimateFactor = PDR.decimationfactor;
-passmein.buf_pts = PDR.buf_pts;
-passmein.nptsTotalPlay = PDR.npts_totalplay;
-passmein.ISI = PDR.isi_buf;
-passmein.max_signal_jitter = PDR.jitter; % jitter trial presentation (+/- 1 trial usually)
-passmein.num_carriers = PDR.SOUNDS_num_carriers; % number of carriers to rove
-passmein.n_speakers = PDR.SOUNDS_num_speakers; % no. of speakers available (including lead speaker)
-tmp=find(PDR.LAG_sounds{1}~=0);
-passmein.sound_onset=tmp(1);
-passmein.trials_to_show=3;
-passmein.hab_loc=find(PDR.SOUNDS_azimuths==PDR.LAG_hab_pos);
-passmein.test_trial_freq=PDR.TEST_trial_freq;
 
 %*********************************%
 %**LOCATION SEQUENCE FOR TDT******%
@@ -136,11 +118,11 @@ session.ntrials = PDR.ntrials;
 session.min_yes = min(PDR.SOUNDS_azimuths)-10;
 session.max_yes = max(PDR.SOUNDS_azimuths)+10;
 session.bufpts = PDR.buf_pts;
+session.stim_pts=PDR.stim_pts;
 session.dec_fact = PDR.decimationfactor;
 session.isi = PDR.isi_buf;
-session.trials_to_show = passmein.trials_to_show;
-tmp=find(PDR.LAG_sounds{1}~=0);
-session.sound_onset=tmp(1); % how many points until sound onset?
+session.trials_to_show = 3;
+session.sound_onset=1; % how many points until sound onset?
 session.npts_totalplay=PDR.npts_totalplay;
 session.srate=(10^6)*(1/PDR.stim_Fs); % sampling period in usec
 session.Fs=PDR.stim_Fs;
@@ -175,20 +157,14 @@ session.HALT_btn=uicontrol(gcf,'Style','pushbutton','Tag','HALT','String','HALT!
 %*********************************************************************
 %from here on, this will be run in a .dll and you can't jump out.
 
-lengthOFtrials=(round(passmein.nptsTotalPlay/PDR.stim_Fs/60*10))/10;  %should be in approximate minutes
+lengthOFtrials=(round(PDR.npts_totalplay/PDR.stim_Fs/60*10))/10;  %should be in approximate minutes
 b=clock;
 PDR.starttime(1:2)=b(4:5);
 disp(['Now the program will just have to run its course.'])
 disp(['It should be done in ~' num2str(lengthOFtrials) ' min from now (' num2str(b(4:5)) ')']);
 
-% convert sound data to single precision & organize into a matrix
-LEAD_sounds=NaN*ones(PDR.buf_pts,PDR.SOUNDS_num_carriers);
-LAG_sounds=NaN*ones(PDR.buf_pts,PDR.SOUNDS_num_carriers);
-for i=1:length(PDR.LEAD_sounds); LEAD_sounds(:,i)=single(PDR.LEAD_sounds{i})'; end;
-for i=1:length(PDR.LAG_sounds); LAG_sounds(:,i)=single(PDR.LAG_sounds{i})'; end;
-
 %write header information to file... saving global variables
-save ([PDR.data_path PDR.filename '.mat'], 'passmein','PDR');
+save ([PDR.data_path PDR.filename '.mat'], 'PDR');
 
 % save a diary of PDR variables
 diary('C:\Documents and Settings\alex\Desktop\lds_pdr_diary.txt');
@@ -201,6 +177,10 @@ diary off;
 
 % run session!
 % NEW DOUBLE BUFFERED LOOP CODE (MATLAB ONLY)
+if(PDR.DEBUG)
+    hWarn=warndlg('Debugging mode set in defaults!')
+    uiwait(hWarn)
+end
 lds_pdr_loop;
 
 % HAVING ISSUES WITH USING THIS C CODE:
@@ -210,7 +190,7 @@ lds_pdr_loop;
 b=clock;
 PDR.stoptime(1:2)=b(4:5);
 %write header information to file... saving global variables
-save ([PDR.data_path PDR.filename '.mat'], 'passmein','PDR');
+save ([PDR.data_path PDR.filename '.mat'], 'PDR');
 cd(PDR.code_path);
 button = questdlg('What do you want to do now?','Session Complete',...
     'Close Windows','Run a New Session','Do Nothing','Close Windows');

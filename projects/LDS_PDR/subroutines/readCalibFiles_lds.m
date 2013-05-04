@@ -1,4 +1,4 @@
-function readCalibFiles
+function readCalibFiles_lds()
 global PDR
 % function to read calibration data and select appropriate scales and
 % atten values for each speaker

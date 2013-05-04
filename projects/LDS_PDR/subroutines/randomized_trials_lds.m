@@ -1,4 +1,4 @@
-function [trial_list] = randomized_trials(not_outlier_IDs,outlier_IDs,nOutliers,nTests,rep_limit)
+function [trial_list] = randomized_trials_lds(not_outlier_IDs,outlier_IDs,nOutliers,nTests,rep_limit)
 
 outlier_list = [];
 nOutlierTypes = length(outlier_IDs);
