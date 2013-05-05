@@ -117,11 +117,11 @@ session.trial_param = 'Azimuth (Deg.)';
 session.ntrials = PDR.ntrials;
 session.min_yes = min(PDR.SOUNDS_azimuths)-10;
 session.max_yes = max(PDR.SOUNDS_azimuths)+10;
-session.bufpts = PDR.buf_pts;
+session.buf_pts = PDR.buf_pts;
 session.stim_pts=PDR.stim_pts;
 session.dec_fact = PDR.decimationfactor;
 session.isi = PDR.isi_buf;
-session.trials_to_show = 3;
+session.trials_to_show = 1;
 session.sound_onset=1; % how many points until sound onset?
 session.npts_totalplay=PDR.npts_totalplay;
 session.srate=(10^6)*(1/PDR.stim_Fs); % sampling period in usec
@@ -136,7 +136,7 @@ sessionPlots('Initialize');
 hold on;
 session.ZoomOut_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.6 0.05 0.05],...
-    'Callback', 'if session.zoomval<2.1; session.zoomval=session.zoomval+0.1; end;');
+    'Callback', 'if session.zoomval<10.1; session.zoomval=session.zoomval+0.1; end;');
 session.ZoomIn_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.8 0.05 0.05],...
     'Callback', 'if session.zoomval>0.1; session.zoomval=session.zoomval-0.1; end;');

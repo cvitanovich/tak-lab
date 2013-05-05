@@ -395,9 +395,8 @@ set(gca,'FontSize',8);
 hold off;
 start = 1; stop=length(PDR.LAG_sounds{1});
 PDR.stim_pts=length(PDR.LAG_sounds{1});
-xes = 0:(1/1000):2*PDR.SOUNDS_length;
-xes = 1000*xes;
-
+xes = 0:(1/PDR.stim_Fs):2*PDR.SOUNDS_length;
+xes=1000.*xes;
 % plot each sound
 hold on;
 for i1=1:PDR.SOUNDS_num_carriers

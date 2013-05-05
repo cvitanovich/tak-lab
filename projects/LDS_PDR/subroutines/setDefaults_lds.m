@@ -15,7 +15,7 @@ cd(code_path);
 PDR = struct(...                        % MAIN PARAMETERS:
     'DEBUG',0,...
     'bird_id',1073,...                  % bird's id #
-    'info_pts',2,...                    % first 2 points in the (decimated) buffer reserved for trial info
+    'info_pts',1,...                    % first point in the (decimated) buffer reserved for trial info
     ...                                 % for example, if testing MAAs a comment should go here
     'maa_test_flag',0,...               % set to one if testing MAAs            
     'virtual',0,...                     % Freefield: virtual = 0, Headphones: virtual = 1
@@ -27,7 +27,7 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'stim_pts',[],...                   % number of pts in the stimulus vector (calculated)
     'buf_pts',30000,...                 % # points in a buffer - 32768 pts for a 0.671 second buffer (Fs = 48828 Hz)
     'buf_dur',[],...                    % buffer duration in ms
-    'isi_buf',10,...                     % number of empty buffers between trials (10 buffers gives an ISI of ~6.71s (+/-1.34 s) using .671 sec sounds)
+    'isi_buf',15,...                     % number of empty buffers between trials (10 buffers gives an ISI of ~6.71s (+/-1.34 s) using .671 sec sounds)
     'isi_time',[],...                   % time between trial buffers in seconds (calculated)
     'decimationfactor',4,...            % decimation factor for data collection (using 4 will give 1875Hz sampling rate)
     'stim_Fs',30000,...                 % sampling rate for sound production

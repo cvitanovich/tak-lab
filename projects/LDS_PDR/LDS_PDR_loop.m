@@ -1,4 +1,4 @@
-function lds_lds_loop
+function lds_pdr_loop
 % function with subroutines for double buffered LDS PDR expt
 global TDT PDR session
 
@@ -116,6 +116,12 @@ while(seekpos < TDT.npts_total_play)
         rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
         session.stim_left=PDR.LEAD_sounds{rove_id};
         session.stim_right=PDR.LAG_sounds{rove_id};
+        % SCALING
+        signalScale=PDR.SOUNDS_speaker_scales_lead(loc-1);
+        session.stim_left=round(signalScale.*session.stim_left);
+        signalScale=PDR.SOUNDS_speaker_scales_lag(loc-1);
+        session.stim_right=round(signalScale.*session.stim_right);
+        % plot sound buffers:
         sessionPlots('Update Stim Plot');
         
         % TDT instructions for this buffer:
@@ -129,18 +135,18 @@ while(seekpos < TDT.npts_total_play)
             
             % load sound tokens into AP2 card for TDT play
             S232('dropall');
-            S232('pushf',session.stim_left,PDR.stim_pts);
+            S232('push16',session.stim_left,PDR.stim_pts);
             S232('dpush',PDR.buf_pts-PDR.stim_pts);
             S232('value',0);
             S232('cat');
-            S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
             S232('qpop16',LEAD_PLAY(1));
-            S232('pushf',session.stim_right,PDR.stim_pts);
+            S232('push16',session.stim_right,PDR.stim_pts);
             S232('dpush',PDR.buf_pts-PDR.stim_pts);
             S232('value',0);
             S232('cat');
-            S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
-            S232('qpop16',LEAD_PLAY(1));
+            S232('qpop16',LAG_PLAY(1));
+            
+
         end
         
         % plot a marker on trial sequence plot
@@ -161,7 +167,7 @@ while(seekpos < TDT.npts_total_play)
             S232('qpop16',LEAD_PLAY(1));
             S232('dpush',PDR.buf_pts);
             S232('value',0);
-            S232('qpop16',LEAD_PLAY(1));
+            S232('qpop16',LAG_PLAY(1));
         end
     end
     
@@ -171,7 +177,7 @@ while(seekpos < TDT.npts_total_play)
         % First Record Channel:
         ch=1; buf=1;
         session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),TDT,SignalPlayFlag,TDT.display_flag);
-        if(SignalPlayFlag)
+        if(SignalPlayFlag==1)
             if(PDR.location_seq(Signalcnt)==TDT.hab_loc_id)
                 session.test_flag=1;
             else
@@ -242,6 +248,12 @@ while(seekpos < TDT.npts_total_play)
             rove_id=PDR.SOUNDS_rove_sequence(Signalcnt);
             session.stim_left=PDR.LEAD_sounds{rove_id};
             session.stim_right=PDR.LAG_sounds{rove_id};
+            % SCALING
+            signalScale=PDR.SOUNDS_speaker_scales_lead(loc-1);
+            session.stim_left=round(signalScale.*session.stim_left);
+            signalScale=PDR.SOUNDS_speaker_scales_lag(loc-1);
+            session.stim_right=round(signalScale.*session.stim_right);
+            % plot sound buffers:
             sessionPlots('Update Stim Plot');
             
             % TDT instructions for this buffer:
@@ -255,20 +267,17 @@ while(seekpos < TDT.npts_total_play)
                 
                 % load sound tokens into AP2 card for TDT play
                 S232('dropall');
-                S232('pushf',session.stim_left,PDR.stim_pts);
+                S232('push16',session.stim_left,PDR.stim_pts);
                 S232('dpush',PDR.buf_pts-PDR.stim_pts);
                 S232('value',0);
                 S232('cat');
-                S232('scale',PDR.SOUNDS_speaker_scales_lead(loc-1));
                 S232('qpop16',LEAD_PLAY(2));
-                S232('dropall');
-                S232('pushf',session.stim_right,PDR.stim_pts);
+                S232('push16',session.stim_right,PDR.stim_pts);
                 S232('dpush',PDR.buf_pts-PDR.stim_pts);
                 S232('value',0);
                 S232('cat');
-                S232('scale',PDR.SOUNDS_speaker_scales_lag(loc-1));
-                S232('qpop16',LEAD_PLAY(2));
-                S232('dropall');
+                S232('qpop16',LAG_PLAY(2));
+                
             end
             
             % plot a marker on trial sequence plot
@@ -299,7 +308,7 @@ while(seekpos < TDT.npts_total_play)
             % First Record Channel:
             ch=1; buf=2;
             session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),TDT,SignalPlayFlag,TDT.display_flag);
-            if(SignalPlayFlag)
+            if(SignalPlayFlag==1)
                 if(PDR.location_seq(Signalcnt)==TDT.hab_loc_id)
                     session.test_flag=1;
                 else
@@ -348,8 +357,8 @@ while(seekpos < TDT.npts_total_play)
         if(session.HALT==1 && session.confirm_halt==1)
             seekpos=Inf;
         end
-       
-            
+        
+        
     end% end second buffer segment
     
 end

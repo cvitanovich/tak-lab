@@ -122,26 +122,24 @@ if(TDT.nRecChannels>0)
     end
     N=TDT.rec_buffers{TDT.nRecChannels}(end);
     
-    if(TDT.dec_factor>0) % decimating?
-        % decimated record buffers
-        TDT.dec_buffers=cell(size(TDT.rec_buffers));
-        nbuffers=length(TDT.recpts{1});
-        start=(N+1); stop=(N+nbuffers);
-        for ch=1:TDT.nRecChannels
-            TDT.dec_buffers{ch}=start:stop;
-            for buf=1:nbuffers
-                dec_pts = ceil(TDT.recpts{ch}(buf) / 2^TDT.dec_factor);
-                S232('allot16',TDT.dec_buffers{ch}(buf),dec_pts);
-            end
-            if(ch<TDT.nRecChannels)
-                nbuffers=length(TDT.recpts{ch+1});
-                start=stop+1;
-                stop=stop+nbuffers;
-            end
+    % decimated record buffers
+    TDT.dec_buffers=cell(size(TDT.rec_buffers));
+    nbuffers=length(TDT.recpts{1});
+    start=(N+1); stop=(N+nbuffers);
+    for ch=1:TDT.nRecChannels
+        TDT.dec_buffers{ch}=start:stop;
+        for buf=1:nbuffers
+            dec_pts = ceil(TDT.recpts{ch}(buf) / 2^TDT.dec_factor);
+            S232('allot16',TDT.dec_buffers{ch}(buf),dec_pts);
         end
-        N=TDT.dec_buffers{TDT.nRecChannels}(end);
+        if(ch<TDT.nRecChannels)
+            nbuffers=length(TDT.recpts{ch+1});
+            start=stop+1;
+            stop=stop+nbuffers;
+        end
     end
-    
+    N=TDT.dec_buffers{TDT.nRecChannels}(end);
+
 	% record spec list
 	S232('dpush',(TDT.nRecChannels+1));
 	S232('value',0);

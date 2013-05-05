@@ -6,7 +6,7 @@ function sessionPlots(options)
 % structure with these parameters:
 % hab_xes, hab_yes, trial_xes, trial_yes
 % ntrials, min_yes, max_yes
-% bufpts, decpts, isi, trials_to_show
+% buf_pts, decpts, isi, trials_to_show
 % zoomval
 
 % other required parameters:
@@ -68,7 +68,7 @@ switch options
         session.hSub(3)=subplot(3,7,[1:5 8:12]); cla; hold on; % trace plot
         set(session.hSub(3),'XtickLabel','');
         title('PDR Trace');
-        session.decpts=ceil(session.bufpts/2^session.dec_fact);
+        session.decpts=ceil(session.buf_pts/2^session.dec_fact);
         session.trace_pts=session.decpts*session.isi*session.trials_to_show;
         session.trace_xes=1:session.trace_pts;
         % circular buffered trace
@@ -92,24 +92,25 @@ switch options
         session.hSub(4)=subplot(3,7,[6:7]); cla; % stim plot (left ch)
         title('Left Ch.');
         dur=1.1*(session.stim_pts/session.Fs);
-        tes=0:(1/session.Fs):dur;
+        tes=1000.*(0:(1/session.Fs):dur);
         session.tes=tes(1:session.stim_pts);
         session.hStimLeft=line([session.tes session.tes],...
             [zeros(1,session.stim_pts) zeros(1,session.stim_pts)],...
             'LineWidth',1,'Color','b');
-        axis([tes(1) tes(end) -1.1 1.1]);
+        axis([tes(1) tes(end) -32760 32760]);
         
         set(gca,'DrawMode','fast');
-        
         set(session.hSub(4),'XtickLabel','');
+        
         session.hSub(5)=subplot(3,7,[13:14]); cla; % stim plot (right ch)
         title('Right Ch.');
         session.hStimRight=line([session.tes session.tes],...
             [zeros(1,session.stim_pts) zeros(1,session.stim_pts)],...
             'LineWidth',1,'Color','g');
-        axis([tes(1) tes(end) -1.1 1.1]);
+        axis([tes(1) tes(end) -32760 32760]);
         set(gca,'DrawMode','fast');
         set(session.hSub(4),'XtickLabel','');
+        xlabel('Time (ms)');
         
         drawnow;
         
@@ -161,14 +162,10 @@ switch options
         
         figure(session.hFig);
         subplot(session.hSub(3)); hold on;
-        % circular buffer update
-        session.trace_yes(1:(session.trace_pts-session.decpts))=session.trace_yes((session.decpts+1):end-2);
+        % circular buffer update (last 2 points only used to plot line
+        % correctly!)
+        session.trace_yes(1:(end-session.decpts-2))=session.trace_yes((session.decpts+1):(end-2));
         session.trace_yes((end-session.decpts-1):(end-2))=session.last_buffer;
-        
-        % update xes
-        %session.dec_xes(1:end-2)=session.dec_xes(1:end-2)+session.decpts;
-        %session.dec_xes(end-1)=session.dec_xes(end-2);
-        %session.dec_xes=session.trace_xes./session.dec_fs; % convert to time values
         session.flag_list=session.flag_list-session.decpts;
         tmp=find(session.flag_list>=0); session.flag_list=session.flag_list(tmp);
         session.test_flag_list=session.test_flag_list-session.decpts;
