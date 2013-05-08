@@ -122,4 +122,4 @@ q=clock;
 y=num2str(q(1));y=y(3:4);
 m=num2str(q(2));if size(m,2)<2;m=['0' m];end
 d=num2str(q(3));if size(d,2)<2;d=['0' d];end
-PDR.filename= [num2str(PDR.bird_id) '_LDS_' y m d '_a'];                    %930=m 929=l 882=d 883=e  (a is index to experiment number for that day)
+PDR.filename= [num2str(PDR.bird_id) '_LDS_' y m d '_a'];                    %930=m 929=l 882=d 883=e  (a is index to experiment number for that day

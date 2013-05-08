@@ -85,11 +85,6 @@ end
 PDR.ntrials = PDR.npretrials+PDR.n_test_trials*PDR.TEST_trial_freq;
 PDR.npts_totalplay=PDR.buf_pts*(PDR.ntrials)*(PDR.isi_buf+1);
 
-if PDR.virtual
-    type='vrt';
-else
-    type='frf';
-end
 
 %*********************************%
 %**LOCATION SEQUENCE FOR TDT******%

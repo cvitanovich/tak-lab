@@ -23,8 +23,14 @@ TDT.dec_factor=PDR.decimationfactor;
 TDT.din = 1;
 TDT.Fs = PDR.stim_Fs;
 TDT.npts_total_play=PDR.npts_totalplay;
-TDT.outFN{1}=[PDR.filename '_REC1.vrt'];
-TDT.outFN{2}=[PDR.filename '_REC2.vrt'];
+% data storage files:
+if PDR.virtual
+    type='vrt';
+else
+    type='frf';
+end
+TDT.outFN{1}=[PDR.filename '_REC1' type];
+TDT.outFN{2}=[PDR.filename '_REC2' type];
 TDT.ntrials=PDR.ntrials;
 TDT.srate=1e6 / TDT.Fs;
 TDT.display_flag=1; % flag to display trace during session
