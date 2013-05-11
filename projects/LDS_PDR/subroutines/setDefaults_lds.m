@@ -25,18 +25,18 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'npretrials',100,...                 % default # of habituating trials before the 1st test trial
     'n_test_trials',15,...              % default # of test trials in a session
     'stim_pts',[],...                   % number of pts in the stimulus vector (calculated)
-    'buf_pts',30000,...                 % # points in a buffer - 32768 pts for a 0.671 second buffer (Fs = 48828 Hz)
+    'buf_pts',32768,...                 % # points in a buffer - 32768 pts for a 0.671 second buffer (Fs = 48828 Hz)
     'buf_dur',[],...                    % buffer duration in ms
     'isi_buf',15,...                     % number of empty buffers between trials (10 buffers gives an ISI of ~6.71s (+/-1.34 s) using .671 sec sounds)
     'isi_time',[],...                   % time between trial buffers in seconds (calculated)
     'decimationfactor',4,...            % decimation factor for data collection (using 4 will give 1875Hz sampling rate)
-    'stim_Fs',30000,...                 % sampling rate for sound production
+    'stim_Fs',48828,...                 % sampling rate for sound production
     'npts_totalplay',[],...            % total no. pts in the session
     'len_session',[nan nan], ...               % length of session (in minutes)
     'starttime',[], ...                 % session start time
     'stoptime', [], ...                 % session stop time
-    'code_path',code_path,...    % path to code
-    'data_path',data_path,...     % flag indicates that AD recording (pupillometer) will be needed
+    'code_path',code_path,...           % path to code
+    'data_path',data_path,...           % flag indicates that AD recording (pupillometer) will be needed
     'base_atten',0,...                  % attenuation value to send to TDT
     'filename',[],...                   % file name for storing session data
     'exit_flag',0,...                   % exit session (quit) flag
