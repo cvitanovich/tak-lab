@@ -24,10 +24,10 @@ TDT.din = 1;
 TDT.Fs = PDR.stim_Fs;
 TDT.npts_total_play=PDR.npts_totalplay;
 % data storage files:
-if PDR.virtual
-    type='vrt';
+if(PDR.virtual==1)
+    type='.vrt';
 else
-    type='frf';
+    type='.frf';
 end
 TDT.outFN{1}=[PDR.filename '_REC1' type];
 TDT.outFN{2}=[PDR.filename '_REC2' type];
