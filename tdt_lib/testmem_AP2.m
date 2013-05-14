@@ -13,7 +13,10 @@ buf_words=(128*1024)/4; % 128K buffers
 nbuffers=w/buf_words;
 dbn=[];
 tmp=NaN*ones(1,buf_words*nbuffers);
-figure; hold on; times2try=[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 45 60 75 90 120 240 300 600]; lp=0;
+figure; hold on; times2try=[1 ...
+        20 ...
+        30 45 60 75 90 120 240 300 600 3600 14400]; 
+lp=0;
 cnt=NaN*ones(2,length(times2try));
 for tm=times2try
     s232('trash'); s232('dropall');
