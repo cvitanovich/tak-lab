@@ -110,8 +110,8 @@ switch options
         set(gca,'DrawMode','fast');
         set(session.hSub(4),'XtickLabel','');
         xlabel('Time (ms)');
-        
         drawnow;
+        
         
     case 'Update Trial Plot'
         % draw a marker to indicate next trial
@@ -211,9 +211,7 @@ switch options
             session.hMark2(i)=line([session.test_flag_list(temp2(i)) session.test_flag_list(temp2(i))],...
                 [session.ymin session.ymax],'LineWidth',1,'Color','r','LineStyle','-','Tag','marker');
         end
-
-        drawnow; % only redraw plot when stimuli are played
-        
+        drawnow;
     
     case 'Update Stim Plot'
         
@@ -234,8 +232,8 @@ switch options
             hWarn=warndlg(['Stimulus too big for TDT!!! MAX(ABS) = ' num2str(mBoth)]);
             session.HALT=1; % halt session;
         end
-        drawnow;
         
+        drawnow;
         
 end
 

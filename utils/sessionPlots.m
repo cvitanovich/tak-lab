@@ -217,9 +217,7 @@ switch options
         drawnow; % only redraw plot when stimuli are played
         
     
-    case 'Update Stim Plot'
-        
-        
+    case 'Update Stim Plot'    
         subplot(session.hSub(4));
         set(session.hStimLeft,'ydata',[session.stim_left session.stim_left]);
         subplot(session.hSub(5));

@@ -33,7 +33,7 @@ TDT.outFN{2}=[PDR.filename '_REC2' type];
 TDT.ntrials=PDR.ntrials;
 TDT.srate=1e6 / TDT.Fs;
 TDT.display_flag=1; % flag to display trace during session
-TDT.max_signal_jitter=PDR.TEST_trial_jitter;
+TDT.max_signal_jitter=PDR.jitter;
 TDT.disp_proc_time=1; % flag to display processing time for each buffer segment
 TDT.hab_id=PDR.hab_id;
 % test stimulus variable:
@@ -69,17 +69,20 @@ CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
 
 %% FILTER TEST SOUNDS WITH HRTFS
 % buffer assignments for TDT
-TESTLEFT=zeros(PDR.TEST_nlocs,PDR.buf_pts);
+% zeros added later to get buffer size = PDR.buf_pts!!!!
+TESTLEFT=zeros(PDR.TEST_nlocs,PDR.TEST_stim_pts+2*PDR.HRTF_nTaps);
 TESTRIGHT=TESTLEFT;
-filtered_test_left=zeros(1,PDR.buf_pts);
+filtered_test_left=zeros(1,PDR.TEST_stim_pts+2*PDR.HRTF_nTaps);
 filtered_test_right=filtered_test_left;
 % loop through test sounds
 for(j=1:PDR.TEST_nlocs)
     % filter each test sound with HRTFS & Store on AP2 Card
     filtered_test_left=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
     filtered_test_right=filter(HRTF.TestR(:,j),1,PDR.TEST_sound);
-    rms_val=(sqrt(mean(filtered_test_left.^2))+...
-        sqrt(mean(filtered_test_right.^2)))/2;
+    % get rms of stimulus (ignoring empty padding for HRIR filtering)
+    tmp_Lt=find(filtered_test_left~=0); tmp_Rt=find(filtered_test_right~=0);
+    rms_val=(sqrt(mean(filtered_test_left(tmp_Lt(1):tmp_Lt(end)).^2))+...
+        sqrt(mean(filtered_test_right(tmp_Rt(1):tmp_Rt(end)).^2)))/2;
     filtered_test_left = (PDR.TEST_target_rms/rms_val).*filtered_test_left;
     filtered_test_right = (PDR.TEST_target_rms/rms_val).*filtered_test_right;
     TESTLEFT(j,:)=filtered_test_left;
@@ -148,11 +151,8 @@ while(seekpos < TDT.npts_total_play)
     % DISPLAY SESSION INFO
     disp_session_info(cntdown,seekpos);
     
-    % PREPARE ADAPTOR
-    if(PDR.flag_adapt>0)
-        [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
-    end
     % TEST TRIAL SCALE
+    
     TDT.stim_left=zeros(1,PDR.buf_pts);
     TDT.stim_right=zeros(1,PDR.buf_pts);
     session.stim_left=zeros(1,session.stim_pts);
@@ -161,9 +161,8 @@ while(seekpos < TDT.npts_total_play)
         loc=PDR.TEST_loc_sequence(Signalcnt);
         if(loc~=0)
             signalScale=PDR.TEST_scale_sequence(Signalcnt);
-            TDT.stim_left=TESTLEFT(loc,:);
-            TDT.stim_right=TESTRIGHT(loc,:);
-            
+            TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTLEFT(loc,:);
+            TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTRIGHT(loc,:);
         else % not playing test sound in this trial!
             signalScale=0;
         end
@@ -173,22 +172,19 @@ while(seekpos < TDT.npts_total_play)
         % plot a marker on trial sequence plot
         session.trialcnt=Signalcnt;
         session.trialval=loc;
-        sessionPlots('Update Trial Plot');
-        
+        sessionPlots3('Update Trial Plot');
         % plot sound buffers:
-        session.stim_left=TDT.stim_left(...
-            (PDR.TEST_on_delay_pts+1):(PDR.TEST_on_delay_pts+session.stim_pts));
-        session.stim_right=TDT.stim_right(...
-            (PDR.TEST_on_delay_pts+1):(PDR.TEST_on_delay_pts+session.stim_pts));
-        if(loc~=0)
-            keyboard;
-        end
-        sessionPlots('Update Stim Plot');
+        session.stim_left=TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt);
+        session.stim_right=TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt);
+        sessionPlots3('Update Stim Plot');
     end
     
     
-    % SETUP ADAPTOR FOR TRIAL BUFFER
-    if(cnt==PDR.isi_buf && PDR.flag_adapt>0)
+    % SETUP ADAPTOR
+    
+    if(cnt~=PDR.isi_buf && PDR.flag_adapt>0)
+        [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
+    elseif(cnt==PDR.isi_buf && PDR.flag_adapt>0)
         % clear circular buffers & set new seed value
         rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
         adapt_state = PDR.ADAPT_state_list(rand_idx);
@@ -213,7 +209,7 @@ while(seekpos < TDT.npts_total_play)
     
     % UPDATE ISI COUNTER AND SIGNAL COUNT
     if(cnt==PDR.isi_buf)
-        cnt=round(TDT.max_signal_jitter.*rand);
+        cnt=round(2*TDT.max_signal_jitter*rand-TDT.max_signal_jitter); % +/- max
         Signalcnt=Signalcnt+1;
     else
         cnt=cnt+1;
@@ -232,7 +228,7 @@ while(seekpos < TDT.npts_total_play)
         else
             session.test_flag=0;
         end
-        sessionPlots('Update Trace Plot');
+        sessionPlots3('Update Trace Plot');
         % Second Record Channel:
         ch=2; buf=1;
         record_buffer(ch, REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
@@ -241,12 +237,7 @@ while(seekpos < TDT.npts_total_play)
     % UPDATE SEEK POSITION
     seekpos = seekpos + PDR.buf_pts;
     
-    % PROCESSING TIME
-    if(TDT.disp_proc_time)
-        t=toc;
-        session.proc_time(end+1)=t;
-        sessionPlots('Update Session Info');
-    end
+
     
     % CHECK FOR HALT
     if(session.HALT==1 && session.confirm_halt==0)
@@ -254,6 +245,14 @@ while(seekpos < TDT.npts_total_play)
     end
     if(session.HALT==1 && session.confirm_halt==1)
         seekpos=Inf;
+    end
+    
+
+    % PROCESSING TIME
+    if(TDT.disp_proc_time)
+        t=toc;
+        session.proc_time(end+1)=t;
+        sessionPlots3('Update Session Info');
     end
     
     if(seekpos<TDT.npts_total_play)
@@ -277,10 +276,7 @@ while(seekpos < TDT.npts_total_play)
         % DISPLAY SESSION INFO
         disp_session_info(cntdown,seekpos);
     
-        % PREPARE ADAPTOR
-        if(PDR.flag_adapt>0)
-            [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
-        end
+        
         % TEST TRIAL SCALE
         TDT.stim_left=zeros(1,PDR.buf_pts);
         TDT.stim_right=zeros(1,PDR.buf_pts);
@@ -290,8 +286,8 @@ while(seekpos < TDT.npts_total_play)
             loc=PDR.TEST_loc_sequence(Signalcnt);
             if(loc~=0)
                 signalScale=PDR.TEST_scale_sequence(Signalcnt);
-                TDT.stim_left=TESTLEFT(loc,:);
-                TDT.stim_right=TESTRIGHT(loc,:);
+                TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTLEFT(loc,:);
+                TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTRIGHT(loc,:);
             else % not playing test sound in this trial!
                 signalScale=0;
             end
@@ -301,23 +297,17 @@ while(seekpos < TDT.npts_total_play)
             % plot a marker on trial sequence plot
             session.trialcnt=Signalcnt;
             session.trialval=loc;
-            sessionPlots('Update Trial Plot');
-            
+            sessionPlots3('Update Trial Plot');
             % plot sound buffers:
-            session.stim_left=TDT.stim_left(...
-                (PDR.TEST_on_delay_pts+1):(PDR.TEST_on_delay_pts+session.stim_pts));
-            session.stim_right=TDT.stim_right(...
-                (PDR.TEST_on_delay_pts+1):(PDR.TEST_on_delay_pts+session.stim_pts));
-            if(loc~=0)
-                keyboard;
-            end
-            sessionPlots('Update Stim Plot');
+            session.stim_left=TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt);
+            session.stim_right=TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt);
+            sessionPlots3('Update Stim Plot');
         end
+        % SETUP ADAPTOR
         
-
-        
-        % SETUP ADAPTOR FOR TRIAL BUFFER
-        if(cnt==PDR.isi_buf && PDR.flag_adapt>0)
+        if(cnt~=PDR.isi_buf && PDR.flag_adapt>0)
+            [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
+        elseif(cnt==PDR.isi_buf && PDR.flag_adapt>0)
             % initialize circular buffers & set new seed value
             rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
             adapt_state = PDR.ADAPT_state_list(rand_idx);
@@ -332,6 +322,8 @@ while(seekpos < TDT.npts_total_play)
             adapt_right=[adapt_left(1:floor(end/2)) ...
                 aright_new(ceil(end/2):end)];
         end
+        
+        
         if(~DEBUG)
             % LEFT CHANNEL BUFFER
             update_buffer(LEFT_PLAY(2),adapt_left,TDT.stim_left,cnt,Signalcnt,signalScale);
@@ -340,7 +332,7 @@ while(seekpos < TDT.npts_total_play)
         end
         % UPDATE ISI COUNTER AND SIGNAL COUNT
         if(cnt==PDR.isi_buf)
-            cnt=round(TDT.max_signal_jitter.*rand);
+            cnt=round(2*TDT.max_signal_jitter*rand-TDT.max_signal_jitter); % +/- max
             Signalcnt=Signalcnt+1;
         else
             cnt=cnt+1;
@@ -359,7 +351,7 @@ while(seekpos < TDT.npts_total_play)
             else
                 session.test_flag=0;
             end
-            sessionPlots('Update Trace Plot');
+            sessionPlots3('Update Trace Plot');
             % Second Record Channel:
             ch=2; buf=2;
             record_buffer(ch, REC_B(buf),DEC_B(buf),SignalPlayFlag,0);
@@ -381,21 +373,19 @@ while(seekpos < TDT.npts_total_play)
             end
         end
         
-        % PROCESSING TIME
-        if(TDT.disp_proc_time)
-            t=toc;
-            session.proc_time(end+1)=t;
-            sessionPlots('Update Session Info');
-        end
-        
-        if(Signalcnt>TDT.ntrials); break; end;
-        
         % CHECK FOR HALT
         if(session.HALT==1 && session.confirm_halt==0)
             confirmdlg;
         end
         if(session.HALT==1 && session.confirm_halt==1)
             seekpos=Inf;
+        end
+        
+        % PROCESSING TIME
+        if(TDT.disp_proc_time)
+            t=toc;
+            session.proc_time(end+1)=t;
+            sessionPlots3('Update Session Info');
         end
     end
     
@@ -428,7 +418,7 @@ min=floor(rem_time/60); sec=rem_time-(60*min);
 session.rem_time=[min sec];
 min=floor(cntdown/60); sec=cntdown-(60*min);
 session.next_test_trial=[min sec];
-sessionPlots('Update Session Info');
+sessionPlots3('Update Session Info');
 
 function confirmdlg
 global session
@@ -438,7 +428,7 @@ session.Confirm_txt=uicontrol('Tag','confirm_txt','Style', 'text','String','Sure
     'BackgroundColor','w','ForegroundColor','k');
 % buttons
 figure(session.hFig); hold on;
-yes='session.confirm_halt=1; session.HALT=1; drawnow;';
+yes='session.confirm_halt=1; session.HALT=1;';
 nope='session.confirm_halt=0; session.HALT=0;';
 nope=[nope ' h=findobj(''Tag'',''confirm''); h2=findobj(''Tag'',''confirm_txt'');'];
 nope=[nope ' delete(h); delete(h2);'];

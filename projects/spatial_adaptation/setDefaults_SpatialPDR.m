@@ -15,6 +15,7 @@ end
     
 PDR = struct(...                            % MAIN PARAMETERS:
     'DEBUG',1,...
+    'jitter',0,...
     'calib',0,...                           % flag for calibrations
     'virtual',1, ...                        % flag for virtual sound presentation
     'record',1, ...                        % flag for recording pupillometer output
@@ -22,9 +23,9 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ntrials',1400,...                       % # of trials in session
     'npretrials',5,...                     % # of trials before first test trial
     'n_test_trials',[],...                  % # of test trials 
-    'buf_pts',16384,...                     % number of pts in each buffer (~0.5s)
+    'buf_pts',30000,...                     % number of pts in each buffer (~0.5s)
     'buf_dur',[],...                        % buffer duration in ms
-    'isi_buf',7,...                         % no. buffers between trials
+    'isi_buf',3,...                         % no. buffers between trials
     'isi_time',[],...                       % ISI (seconds) between trials
     'decimationfactor',4, ...               % decimation factor for data collection
     'stim_Fs', 30000, ...                   % sampling rate (Hz) for stimuli
@@ -34,7 +35,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'stoptime', [], ...                     % session stop time
     'code_path', code_path,...  % path to code
     'data_path', data_path, ...     % data path (normally: c:\andrew\pdr\data normally, calib: c:\andrew\pdr\calib_data)
-    'base_atten',60,...                      % base attenuation for PA4
+    'base_atten',70,...                      % base attenuation for PA4
     'filename',[],...                       % filename for session data
     'bird_id',925,...
     'hab_id',0,...
@@ -62,7 +63,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_ramp',5,...                       % ramp duration for test sound (should be 5ms)
     'TEST_on_delay_pts',[],...              % delay before test sound onset (TBD)
     'TEST_trial_freq',10, ...                % test sound every x trials
-    'TEST_trial_jitter',5, ...              % maximum jitter in isi_buf
+    'TEST_trial_jitter',0, ...              % maximum jitter in isi_buf
     'TEST_SPLs',[-12 0 3 6 12],...          % target SPLs for test sounds
     'TEST_scales',[],...                    % scales (calculated using calibration data)
     'TEST_sound',[],...                     % test sound stored here

@@ -91,12 +91,12 @@ uiwait(h)
 
 % make test sound:
 stim = makeTest(PDR.TEST_seed,PDR.TEST_dur*1000,PDR.TEST_bandwidth(1),PDR.TEST_bandwidth(2),PDR.stim_Fs,PDR.TEST_ramp);
-PDR.TEST_sound = zeros(1,PDR.buf_pts);
+%PDR.TEST_sound = zeros(1,PDR.buf_pts);
 on_delay_pts = floor((PDR.buf_pts - length(stim))/2);
 PDR.TEST_on_delay_pts = on_delay_pts;
 PDR.TEST_stim_pts=length(stim);
-PDR.TEST_sound(on_delay_pts+1:on_delay_pts+PDR.TEST_stim_pts) = stim; % place stimulus in buffer mid-section
-%PDR.TEST_sound=[zeros(1,PDR.HRTF_nTaps) stim zeros(1,PDR.HRTF_nTaps)]; % add zeros at beginning for fir filtering
+%PDR.TEST_sound(on_delay_pts+1:on_delay_pts+PDR.TEST_stim_pts) = stim; % place stimulus in buffer mid-section
+PDR.TEST_sound=[zeros(1,PDR.HRTF_nTaps) stim zeros(1,PDR.HRTF_nTaps)]; % add zeros at beginning/end for fir filtering
 PDR.TEST_sound = PDR.TEST_sound ./ (max(abs(PDR.TEST_sound)));
 
 clear stim;
@@ -111,8 +111,8 @@ end
 % RAMP SETUP:
 ramplen = 5; % length of ramp in ms
 tmp = find(PDR.TEST_sound ~= 0);
-PDR.TEST_start_pt = PDR.TEST_on_delay_pts;
-PDR.TEST_stop_pt = PDR.TEST_on_delay_pts+length(PDR.TEST_sound);
+PDR.TEST_start_pt = PDR.TEST_on_delay_pts-PDR.HRTF_nTaps+1;
+PDR.TEST_stop_pt = PDR.TEST_on_delay_pts+PDR.TEST_stim_pts+PDR.HRTF_nTaps;
 ptsramp=round(ramplen/1000*PDR.stim_Fs);
 on_rmp=1:-1/(ptsramp-1):0;
 off_rmp=0:1/(ptsramp-1):1;
@@ -223,7 +223,7 @@ session.ntrials = PDR.ntrials;
 session.min_yes = min(AZs)-10;
 session.max_yes = max(AZs)+10;
 session.buf_pts = PDR.buf_pts;
-session.stim_pts=PDR.TEST_stim_pts; % stimulus occupies whole buffer
+session.stim_pts=PDR.TEST_stim_pts+2*PDR.HRTF_nTaps; % stimulus plotting length
 session.dec_fact = PDR.decimationfactor;
 session.isi = PDR.isi_buf;
 session.trials_to_show = 3;

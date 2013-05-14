@@ -8,6 +8,7 @@ function [filtered_buffer, circ_buffer] = circ_fir(circ_buffer,new_buffer,coefs)
     % filtered_buffer -- the filtered output
     nTAPS=length(coefs);
     dur=length(new_buffer);
+    tmp=NaN.*ones(1,(dur+nTAPS-1));
     circ_buffer=[circ_buffer((end-nTAPS+1):end) new_buffer]; % circular buffer for data (shift by duration of each data buffer)
     tmp=conv(coefs,circ_buffer);
     filtered_buffer=tmp(nTAPS+1:dur+nTAPS);
