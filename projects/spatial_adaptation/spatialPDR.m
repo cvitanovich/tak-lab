@@ -2,6 +2,13 @@ function spatialPDR
 % A FUNCTION TO RUN A SPATIAL PDR EXPERIMENT WITH AN ADAPTOR
 global PDR TDT HRTF session
 
+
+% DEBUGGING FLAG TO SKIP TDT INSTRUCTIONS
+DEBUG=PDR.DEBUG;
+if(DEBUG)
+ 	% SET ATTENS & SCALES, maybe??? (FIX)
+end
+
 %% INITIATE TDT PARAMETERS HERE
 TDT.nPlayChannels=2;
 TDT.playpts = {[PDR.buf_pts PDR.buf_pts],[PDR.buf_pts PDR.buf_pts]};
@@ -15,8 +22,14 @@ TDT.dec_factor=PDR.decimationfactor;
 TDT.din = 1;
 TDT.Fs = PDR.stim_Fs;
 TDT.npts_total_play=PDR.npts_totalplay;
-TDT.outFN{1}=[PDR.filename '_REC1.vrt'];
-TDT.outFN{2}=[PDR.filename '_REC2.vrt'];
+% data storage files:
+if PDR.virtual
+    type='vrt';
+else
+    type='frf';
+end
+TDT.outFN{1}=[PDR.filename '_REC1' type];
+TDT.outFN{2}=[PDR.filename '_REC2' type];
 TDT.ntrials=PDR.ntrials;
 TDT.srate=1e6 / TDT.Fs;
 TDT.display_flag=1; % flag to display trace during session
@@ -51,7 +64,7 @@ CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
 % circular buffers for HRTF filtering (left/right):
 CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
 
-if(true) % for debugging without the TDT
+if(~DEBUG) % for debugging without the TDT
     %% INITIALIZE TDT
     out=TDT_init;
     if(out==-1); return; end;

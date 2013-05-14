@@ -33,7 +33,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'data_path', data_path, ...     % data path (normally: c:\andrew\pdr\data normally, calib: c:\andrew\pdr\calib_data)
     'base_atten',0,...                      % base attenuation for PA4
     'filename',[],...                       % filename for session data
-    'bird_id',929,...
+    'bird_id',1073,...
     ...
     ...                                     % ADAPTING STIMULUS PARAMETERS:
     'ADAPT_loc',[0 0],...                   % location of adapting stimulus
@@ -68,7 +68,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     ...
     ...                                     % HRTF PARAMETERS:
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
-    'HRTF_fname','1073AC_eq_ABLequal_normed.mat');
+    'HRTF_fname',[]);
 
 PDR.isi_time=PDR.buf_pts/PDR.stim_Fs;
 PDR.ADAPT_dur=(PDR.isi_buf*PDR.isi_time) + (PDR.isi_time - PDR.TEST_dur)/2;
