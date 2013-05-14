@@ -5,10 +5,12 @@ if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
     code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/spatial_adaptation/';
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
     hrtf_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/HRTFs/Matlab_V6/';
+    calib_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/calib_data/';
 else
     code_path='C:\andrew\CORE\tak-lab\projects\spatial_adaptation\';
     data_path='C:\andrew\pdr\data\';
     hrtf_path='C:\andrew\CORE\tak-lab\HRTFs\Matlab_V6\';
+    calib_path='C:\andrew\CORE\tak-lab\calib_data\';
 end
     
 PDR = struct(...                            % MAIN PARAMETERS:
@@ -68,7 +70,10 @@ PDR = struct(...                            % MAIN PARAMETERS:
     ...
     ...                                     % HRTF PARAMETERS:
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
-    'HRTF_fname',[]);
+    'HRTF_fname',[],...
+    ...
+    'CALIB_directory',calib_path,...    % directory for calibration files
+    'CALIB_fname',[]);
 
 % open correct HRTF file
 switch(PDR.bird_id)
