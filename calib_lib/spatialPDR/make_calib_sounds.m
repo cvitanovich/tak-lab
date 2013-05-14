@@ -37,7 +37,7 @@ ok=0; cnt=0;
 while(~ok)
     PDR.OCTAVE_seed=PDR.TEST_seed+cnt;
     tmp= makeTest(PDR.OCTAVE_seed,PDR.TEST_dur,bandwidth(1),bandwidth(2),PDR.stim_Fs,0);
-    tmp = tmp ./ (max(abs(tmp))); % NORMALIZE
+    tmp = 0.999.*(tmp ./ (max(abs(tmp)))); % NORMALIZE
     % Convolve with HRTF (ABL Equalized) for frontal location (El,Az)=(0,0)
     PDR.OCTAVE_left = filter(HRTF.left,1,tmp);
     PDR.OCTAVE_right = filter(HRTF.right,1,tmp);
@@ -66,7 +66,7 @@ ok=0; cnt=0;
 while(~ok)
     PDR.BBN_seed=PDR.TEST_seed+cnt;
     tmp= makeTest(PDR.BBN_seed,PDR.TEST_dur,bandwidth(1),bandwidth(2),PDR.stim_Fs,0);
-    tmp = tmp ./ (max(abs(tmp))); % NORMALIZE
+    tmp = 0.999.*(tmp ./ (max(abs(tmp)))); % NORMALIZE
     % Convolve with HRTF (ABL Equalized) for frontal location (El,Az)=(0,0)
     PDR.BBN_left = filter(HRTF.left,1,tmp);
     PDR.BBN_right = filter(HRTF.right,1,tmp);
@@ -85,6 +85,7 @@ while(~ok)
     end
     cnt=cnt+1;
 end
+
 PDR.BBN_left = rampMySound(PDR.BBN_left,PDR.TEST_ramp,PDR.stim_Fs);
 PDR.BBN_right = rampMySound(PDR.BBN_right,PDR.TEST_ramp,PDR.stim_Fs);
 
@@ -97,14 +98,14 @@ while(~ok)
     rand('state',PDR.GTONE_seed);
     tmp=rand(1,PDR.buf_pts);
     tmp=filtfilt(PDR.GTONE_coefs,1,tmp);
-    tmp = tmp ./ (max(abs(tmp))); % NORMALIZE
+    tmp = 0.999.*(tmp ./ (max(abs(tmp)))); % NORMALIZE
     % Convolve with HRTFs (ABL Equalized) for frontal location (El,Az)=(0,0)
     PDR.GTONE_left = filter(HRTF.left,1,tmp);
     PDR.GTONE_right = filter(HRTF.right,1,tmp);
     % NORMALIZE TO +/- 1
-    mx=max(abs([PDR.BBN_left PDR.BBN_right]));
-    PDR.BBN_left= PDR.BBN_left./mx;
-    PDR.BBN_right= PDR.BBN_right./mx;
+    mx=max(abs([PDR.GTONE_left PDR.GTONE_right]));
+    PDR.GTONE_left= PDR.GTONE_left./mx;
+    PDR.GTONE_right= PDR.GTONE_right./mx;
     rms_left= sqrt(mean(PDR.GTONE_left.^2));
     rms_right= sqrt(mean(PDR.GTONE_right.^2));
     rms_avg = (rms_left+rms_right)/2;
@@ -118,3 +119,4 @@ while(~ok)
 end
 PDR.GTONE_left = rampMySound(PDR.GTONE_left,PDR.TEST_ramp,PDR.stim_Fs);
 PDR.GTONE_right = rampMySound(PDR.GTONE_right,PDR.TEST_ramp,PDR.stim_Fs);
+

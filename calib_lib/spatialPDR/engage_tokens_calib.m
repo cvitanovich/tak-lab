@@ -21,7 +21,7 @@ TDT.srate=1e6 / TDT.Fs;
 TDT.buf_pts=PDR.buf_pts;
 TDT.attens=[0 0];
 
-keyboard
+
 % TDT INIT
 out=TDT_init;
 if(out==-1); return; end;
@@ -35,12 +35,18 @@ TDT_attens(TDT);
 % INITIALIZE BUFFERS
 TDT=TDT_buffers(TDT);
 
+PDR.TMP_LT=TDT.n_total_buffers+1;
+S232('allotf',PDR.TMP_LT,TDT.buf_pts);
+PDR.TMP_RT=TDT.n_total_buffers+2;
+S232('allotf',PDR.TMP_RT,TDT.buf_pts);
+
 
 tokens = {'GTONE','OCTAVE','BBN'};
 for cnt=1:length(tokens)
     eval(['left_snd = PDR.' tokens{cnt} '_left;']);
     eval(['right_snd = PDR.' tokens{cnt} '_right;']);
     [lo, hi] = det_cutoffs(PDR.scales_2_try_for_cutoffs, left_snd, right_snd);
+	lo=round(10^lo); hi=round(10^hi);
     scales=lo:((hi-lo)/PDR.nscales):hi;
     avg_rms = test_scales(scales, left_snd, right_snd);
     both_dbs = (1/KNOWLES.coeffs(2))*log( (avg_rms - KNOWLES.coeffs(3)) ./ KNOWLES.coeffs(1) );
@@ -81,7 +87,7 @@ global KNOWLES
 avg_rms = test_scales(scales2try,left_snd,right_snd);
 % select cutoffs
 both_dbs = (1/KNOWLES.coeffs(2))*log( (avg_rms - KNOWLES.coeffs(3)) ./ KNOWLES.coeffs(1) );
-[lo, hi] = select_cutoffs(log10(scales_lead),both_dbs);
+[lo, hi] = select_cutoffs(log10(scales2try),both_dbs);
 if hi>log10(32760)
     hi=log10(32760);
 end
@@ -109,23 +115,20 @@ close(hFig);
 drawnow;
 
 function avg_rms = test_scales(scales,left_snd,right_snd)
-global TDT
-TMP_LT=TDT.n_total_buffers+1;
-S232('allotf',TMP_LT,TDT.buf_pts);
-TMP_RT=TDT.n_total_buffers+2;
-S232('allotf',TMP_RT,TDT.buf_pts);
+global TDT PDR
+
 s232('pushf',left_snd, TDT.buf_pts);
-s232('qpopf',TMP_LT);
+s232('qpopf',PDR.TMP_LT);
 s232('pushf',right_snd, TDT.buf_pts);
-s232('qpopf',TMP_RT);
+s232('qpopf',PDR.TMP_RT);
+hWait=waitbar(0,'playing sounds...');
+
 for j=1:length(scales)
-    S232('qpushf',TMP_LT);
+    S232('qpushf',PDR.TMP_LT);
     S232('scale',scales(j));
-    S232('scale',50);
     s232('qpop16',TDT.stim_buffers{1}(1));
-    s232('qpushf',TMP_RT);
+    s232('qpushf',PDR.TMP_RT);
     S232('scale',scales(j));
-    s232('scale',50);
     s232('qpop16',TDT.stim_buffers{2}(1));
     S232('seqplay',TDT.play_spec);
     % recording voltage
@@ -150,8 +153,9 @@ for j=1:length(scales)
     left_rms = sqrt(mean(left_tmp.^2));
     right_rms = sqrt(mean(right_tmp.^2));
     avg_rms(j) = (left_rms + right_rms)/2;
+	waitbar(j/length(scales),hWait);
 end
-
+close(hWait);
 % REGRESSION STATS
 function [RSQ, COEFFS] = regress_stats(xes,yes,alfa,xrange,col,info_flg)
 % plot data

@@ -97,6 +97,7 @@ switch options
         session.hStimLeft=line([session.tes session.tes],...
             [zeros(1,session.stim_pts) zeros(1,session.stim_pts)],...
             'LineWidth',1,'Color','b');
+        
         axis([tes(1) tes(end) -32760 32760]);
         
         set(gca,'DrawMode','fast');

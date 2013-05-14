@@ -178,12 +178,12 @@ else
 end
 
 % cell array for Knowles calibration data
-attens=30:-10:0;
+attens=10:-10:0;%30:-10:0;
 
 % loop through a range of scales and get SPL readings
 
 step=10; cntdwn=20; cnt=0; spls=[];
-scalez=1000:3000:28000; % scales to use for SPL readings for each attenuation level
+scalez=1000:2000:30000; % scales to use for SPL readings for each attenuation level
 str{1}=['Get ready to measure SPLs for ' num2str(length(scalez)*length(attens)) ' sounds'];
 str{2}=['in steps of ' num2str(step)];
 hMsg=msgbox(str); 
