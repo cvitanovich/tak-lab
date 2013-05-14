@@ -70,5 +70,14 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
     'HRTF_fname',[]);
 
+% open correct HRTF file
+switch(PDR.bird_id)
+    case 1073
+        PDR.HRTF_fname='1073AC_eq_ABLequal_normed.mat';
+    case 925
+        PDR.HRTF_fname='925AD_eq_ABLequal_normed.mat';
+end
+
+
 PDR.isi_time=PDR.buf_pts/PDR.stim_Fs;
 PDR.ADAPT_dur=(PDR.isi_buf*PDR.isi_time) + (PDR.isi_time - PDR.TEST_dur)/2;

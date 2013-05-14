@@ -113,7 +113,7 @@ if(~DEBUG) % for debugging without the TDT
     
     %% ZERO PLAY BUFFERS
     zero_play_buffers(TDT);
-    
+    keyboard
     %% START SEQUENCED PLAY
     init_sequenced_play(TDT);
     
