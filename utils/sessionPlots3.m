@@ -1,4 +1,4 @@
-function sessionPlots(options)
+function sessionPlots3(options)
 % plots information about a PDR session in real time 
 % session=structure with data for the session, 
 % options=tells sessionPlots what action to take
@@ -39,8 +39,6 @@ switch options
         set(session.hFig, 'Position', [0.17*screen_size(3) 0.04*screen_size(4) 0.8*screen_size(3) 0.90*screen_size(4)] );
         
         session.hSub(1)=subplot(3,7,[17:21]); hold on; % trial plot
-        plot(session.hab_xes,session.hab_yes,'g*','MarkerSize',1);
-        plot(session.trial_xes,session.trial_yes,'r+');
         xlabel('Trial #'); ylabel(session.trial_param);
         title('Trial Sequence');
         %legend({'Habituating Stimulus','Test Stimuli'},-1);
@@ -236,7 +234,6 @@ switch options
             hWarn=warndlg(['Stimulus too big for TDT!!! MAX(ABS) = ' num2str(mBoth)]);
             session.HALT=1; % halt session;
         end
-        
         drawnow;
         
         

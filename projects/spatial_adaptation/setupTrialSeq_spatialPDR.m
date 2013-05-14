@@ -1,6 +1,6 @@
-function quit = setupTrialSeq()
+function [quit,PDR] = setupTrialSeq_spatialPDR(PDR)
 % function to set up trial sequence for spatialPDR
-global PDR session
+
 
 setup=1;
 while setup
@@ -50,51 +50,12 @@ while setup
     
     PDR.TEST_loc_sequence = loc_seq(1:PDR.ntrials+1);
     
-    
-    screen_size = get(0, 'ScreenSize');
-    session.hFig = figure; session.hTrialPlot=subplot(3,3,[1:3]);
-    set(session.hFig,'renderer','OpenGL'); %use OpenGL for renderer
-    set(session.hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );
+    % run script to plot trials
+    screen_size = get(0, 'ScreenSize'); hFig = figure;
+    set(hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );
     hold on;
-    x=0;
-    tmp = find(PDR.TEST_loc_sequence~=0);
-    if length(tmp)<1
-        warndlg('No trials with this config!','No Trials');
-        quit = 1;
-        close(session.hFig);
-        return;
-    end
-    cnt=0;
-    scale_list=sort(PDR.TEST_scales);
-    for i=1:length(PDR.TEST_loc_sequence)
-        x=x+1;
-        if PDR.TEST_loc_sequence(i) ~=0
-            cnt=cnt+1;
-            loc = mod(PDR.TEST_loc_sequence(i),5);
-            scale = PDR.TEST_scale_sequence(i);
-            %r= scale;
-            sz(i)=ceil(log10(scale)+1)+5;
-            colr = find(scale_list==PDR.TEST_scale_sequence(i))/length(scale_list);
-            plot(x,PDR.TEST_loc_sequence(i),...
-                'Marker','*',...
-                'MarkerFaceColor','none',...
-                'MarkerEdgeColor',[colr 0 1-colr],...
-                'MarkerSize',sz(i));
-        end
-        
-    end
+    PDR=plot_trials_spatialPDR(PDR);
     
-    PDR.n_test_trials = cnt;
-    
-    xlabel('Trial #');
-    ylabel('Location (el,az)');
-    y_tick_labels{1,PDR.TEST_nlocs} = [];
-    for i=1:PDR.TEST_nlocs
-        y_tick_labels{i} = ['(' num2str(PDR.TEST_locs(i,1)) ',' num2str(PDR.TEST_locs(i,2)) ')'];
-    end
-    set(gca,'YTick',1:PDR.TEST_nlocs,'YTickLabel',y_tick_labels);
-    axis([0 PDR.ntrials+1 0 PDR.TEST_nlocs+1]);
-    whitebg(gcf,'k');
     warning off MATLAB:QUESTDLG:stringMismatch;
     test=questdlg(['# Tests = ' num2str(PDR.n_test_trials) ' ... Acceptable trial sequence?'],'Trial Sequence Confirmation','YES','NO','QUIT','NO');
     

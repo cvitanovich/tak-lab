@@ -61,11 +61,21 @@ global PDR HRTF session
 
 setDefaults_spatialPDR; % sets default values for running a session
 
+% load calibration files and calculate scales
+load([PDR.CALIB_directory PDR.CALIB_fname]);
+eval(['mAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(1,1);']);
+eval(['bAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(2,1);']);
+PDR.ADAPT_scale=round(10^((PDR.ADAPT_SPL-bAdapt+PDR.base_atten)/mAdapt));
+eval(['mTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(1,1);']);
+eval(['bTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(2,1);']);
+PDR.TEST_scales=round(10.^((PDR.TEST_SPLs-bTest+PDR.base_atten)./mTest));
+
 % buffer duration (ms):
 PDR.buf_dur = 1000*PDR.buf_pts/PDR.stim_Fs;
-
-% Time (in seconds) between test stimuli:
-PDR.isi_time = ( PDR.buf_dur*PDR.isi_buf+(PDR.buf_dur-PDR.TEST_dur)/2 )/1000;
+% isi time:
+PDR.isi_time=PDR.buf_pts/PDR.stim_Fs;
+% approximate duration of adaptor prior to each test trial:
+PDR.ADAPT_dur=(PDR.isi_buf*PDR.isi_time) + (PDR.isi_time - PDR.TEST_dur)/2;
 
 q=clock;
 y=num2str(q(1));y=y(3:4);
@@ -74,8 +84,9 @@ d=num2str(q(3));if size(d,2)<2;d=['0' d];end
 
 PDR.filename = [y m d '_' num2str(PDR.bird_id) 'a'];
 PDR.npts_totalplay = PDR.ntrials*(PDR.isi_buf+1)*PDR.buf_pts; % Calculate length of session!
-PDR.len_session = (1/60)*(PDR.npts_totalplay/PDR.stim_Fs); % length of session in minutes
-h=msgbox(['Session will last approximately ' num2str(PDR.len_session) ' minutes']);
+PDR.len_session(1) = floor((1/60)*(PDR.npts_totalplay/PDR.stim_Fs)); % length of session (minutes)
+PDR.len_session(2) = round(rem((PDR.npts_totalplay/PDR.stim_Fs),60)); % seconds
+h=msgbox(['Session will last approximately ' num2str(PDR.len_session(1)) ' min' num2str(PDR.len_session(2)) ' sec']);
 uiwait(h)
 
 % make test sound:
@@ -83,13 +94,15 @@ stim = makeTest(PDR.TEST_seed,PDR.TEST_dur*1000,PDR.TEST_bandwidth(1),PDR.TEST_b
 PDR.TEST_sound = zeros(1,PDR.buf_pts);
 on_delay_pts = floor((PDR.buf_pts - length(stim))/2);
 PDR.TEST_on_delay_pts = on_delay_pts;
-PDR.TEST_sound(on_delay_pts+1:on_delay_pts+length(stim)) = stim; % place stimulus in buffer mid-section
+PDR.TEST_stim_pts=length(stim);
+PDR.TEST_sound(on_delay_pts+1:on_delay_pts+PDR.TEST_stim_pts) = stim; % place stimulus in buffer mid-section
+%PDR.TEST_sound=[zeros(1,PDR.HRTF_nTaps) stim zeros(1,PDR.HRTF_nTaps)]; % add zeros at beginning for fir filtering
 PDR.TEST_sound = PDR.TEST_sound ./ (max(abs(PDR.TEST_sound)));
 
 clear stim;
 
 quit = 0;
-quit = setupTrialSeq_spatialPDR; % just sets up trial IDs so far
+[quit,PDR] = setupTrialSeq_spatialPDR(PDR); % just sets up trial IDs so far
 
 if quit
     return;
@@ -98,8 +111,8 @@ end
 % RAMP SETUP:
 ramplen = 5; % length of ramp in ms
 tmp = find(PDR.TEST_sound ~= 0);
-PDR.TEST_start_pt = tmp(1);
-PDR.TEST_stop_pt = tmp(end);
+PDR.TEST_start_pt = PDR.TEST_on_delay_pts;
+PDR.TEST_stop_pt = PDR.TEST_on_delay_pts+length(PDR.TEST_sound);
 ptsramp=round(ramplen/1000*PDR.stim_Fs);
 on_rmp=1:-1/(ptsramp-1):0;
 off_rmp=0:1/(ptsramp-1):1;
@@ -163,7 +176,8 @@ else % using another format (e.g. for 930 or 929)
 end
 
 % PICK STATES FOR THE ADAPTOR
-[resulting_rms, state_list, success]=gtone_state_picker(PDR.ADAPT_coefs,PDR.stim_Fs,PDR.ADAPT_dur,PDR.buf_pts,PDR.ADAPT_nstates,HRTF.AdaptL, HRTF.AdaptR,PDR.ADAPT_target_rms);
+[resulting_rms, state_list, success]=gtone_state_picker(PDR.ADAPT_coefs,PDR.stim_Fs,...
+    PDR.ADAPT_dur,PDR.buf_pts,PDR.ADAPT_nstates,HRTF.AdaptL, HRTF.AdaptR,PDR.ADAPT_target_rms);
 if(abs(resulting_rms-PDR.ADAPT_target_rms)>0.05*PDR.ADAPT_target_rms)
     warndlg('RMS voltage not matching target rms very well!');
 end
@@ -194,45 +208,56 @@ if strcmp(button1,'NO')
 end
 
 %*********************************%
-%** PLOT PDR TRACE ***************%
+%**PLOT TRIAL SEQUENCE ETC *******%
 %*********************************%
-session.bufpts = PDR.buf_pts;
+
+AZs=PDR.TEST_locs(:,2); % azimuths
+locs = PDR.TEST_loc_sequence; % lag location sequence (IDs)
+hab = 0; % habituating location (lag)
+session.hab_xes = find(locs == hab);
+session.hab_yes = hab*ones(1,length(session.hab_xes));
+session.trial_xes = find(locs ~= hab);
+session.trial_yes = AZs(PDR.TEST_loc_sequence(session.trial_xes));
+session.trial_param = 'Azimuth (Deg.)';
+session.ntrials = PDR.ntrials;
+session.min_yes = min(AZs)-10;
+session.max_yes = max(AZs)+10;
+session.buf_pts = PDR.buf_pts;
+session.stim_pts=PDR.TEST_stim_pts; % stimulus occupies whole buffer
 session.dec_fact = PDR.decimationfactor;
 session.isi = PDR.isi_buf;
 session.trials_to_show = 3;
-tmp=find(PDR.TEST_sound~=0);
-session.sound_onset=tmp(1); % how many points until sound onset?
+session.sound_onset=PDR.TEST_on_delay_pts; % how many points until sound onset?
 session.npts_totalplay=PDR.npts_totalplay;
 session.srate=(10^6)*(1/PDR.stim_Fs); % sampling period in usec
+session.Fs=PDR.stim_Fs;
 session.stim_fs=PDR.stim_Fs;
 session.zoomval=0.4;
-screen_size = get(0, 'ScreenSize');% get scrn size
-figure(session.hFig); whitebg(gcf,'k');
-session.hInfo=subplot(3,3,4:6); axis off;
-session.txt(1) = text(.01,.9,'');
-session.txt(2) = text(.01,.7,'');
-session.txt(3) = text(.01,.5,'');
-session.txt(4) = text(.01,.3,'');
-session.hTracePlot=subplot(3,3,7:9); axis off;
-
-hold on;
+session.HALT=0; % for halting the session early
+session.confirm_halt=0; % extra safeguard for halting session
 
 % requires session to be declared a global
-sessionPlots2('Initialize');
+sessionPlots3('Initialize');
 hold on;
-uicontrol(session.hFig,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
+session.ZoomOut_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.6 0.05 0.05],...
-    'Callback', 'if session.zoomval<2.1; session.zoomval=session.zoomval+0.1; end;');
-uicontrol(session.hFig,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
+    'Callback', 'if session.zoomval<10.1; session.zoomval=session.zoomval+0.1; end;');
+session.ZoomIn_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
     'Units','normalized','FontSize',8,'Position',[0.02 0.8 0.05 0.05],...
     'Callback', 'if session.zoomval>0.1; session.zoomval=session.zoomval-0.1; end;');
-
+session.HALT_btn=uicontrol(gcf,'Style','pushbutton','Tag','HALT','String','HALT!',...
+    'Units','normalized','FontSize',14,'Position',[0.02 0.4 0.05 0.05],...
+    'BackgroundColor','r','ForegroundColor','y',...
+    'Callback', 'session.HALT=1;');
 % required to initialize sessionPlots:
 % structure with these parameters:
 % hab_xes, hab_yes, trial_xes, trial_yes
 % ntrials, min_yes, max_yes
 % bufpts, decpts, isi, trials_to_show
 
+% plot trial markers:
+figure(session.hFig); subplot(session.hSub(1)); hold on;
+plot_trials_spatialPDR(PDR);
 % *********************************************************************
 % *********************************************************************
 %       Start Main Loop Here
@@ -251,7 +276,6 @@ PDR = orderfields(PDR); % order fields by ASCII dictionary order
 save ([PDR.data_path PDR.filename '.mat'], 'PDR','HRTF');
 
 % ENGAGE the main spatialPDR script:
-keyboard
 spatialPDR;
 
 b=clock;
