@@ -12,7 +12,7 @@ dt='/home/andrew/science/Alex/LDS_Project/analysis/code';
 cd ('/home/andrew/science/Alex/LDS_Project/data');
 path(path,dt);
 [A.fname, A.pname] = uigetfile('*.mat', 'Select header file for daily analysis');
-global PDR passmein
+global PDR
 
 if A.fname==0
     disp('Couldn''t find file!')
@@ -30,7 +30,7 @@ for tID=1:length(PDR.TEST_azimuths)
     A.test_info{tID} = num2str(PDR.TEST_azimuths(tID));
 end
 A.infopts=2; % first 2 points used for trial info (trial marker=1, location=1,2,3...,8,9,etc)
-A.PDRfile=passmein.FN1;
+A.PDRfile=PDR.filename;
 tmp = find(PDR.LAG_sounds{1}~=0);
 A.sndStart = tmp(1)/size(PDR.LAG_sounds{1},2); % how far through the buffer (fractional) does the sound start
 A.dec_Fs = PDR.stim_Fs/2^PDR.decimationfactor; % decimated samp. rate

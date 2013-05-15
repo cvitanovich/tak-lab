@@ -1,5 +1,5 @@
 function [varargout] = lds_func(fcn,varargin)
-global PDR passmein A
+global PDR A
 
 switch nargin
     case 4
@@ -15,9 +15,9 @@ switch nargin
 end
 
 function load_and_filter_data
-    global PDR passmein A
-    A.numpts=passmein.buf_pts/(2^passmein.decimateFactor);
-    A.numbufs=passmein.nptsTotalPlay/(2^passmein.decimateFactor)/A.numpts;  
+    global PDR A
+    A.numpts=PDR.buf_pts/(2^PDR.decimationfactor);
+    A.numbufs=passmein.nptsTotalPlay/(2^PDR.decimationfactor)/A.numpts;  
     button = questdlg('Use REC1 or REC2???','Choose recording filename','REC1','REC2','REC1');
     fid=fopen([A.pname PDR.filename '_' button A.ext]); A.raw_data=fread(fid,'short'); fclose(fid);
     A.trialtype=A.raw_data(1:A.numpts:size(A.raw_data));
@@ -89,7 +89,7 @@ function load_and_filter_data
     end
     
 function remove_blinks
-    global PDR passmein A
+    global PDR A
     %Plot fig to pick blink threshold levels
     hblink = figure('Name','Remove A.trials with Blinks','NumberTitle','off');
     set(gcf, 'Position', [0.1 0.1 0.4*A.scrn(3) 0.4*A.scrn(4)]);
@@ -129,7 +129,7 @@ function remove_blinks
     end
 
 function pdr_diagnostic_plots
-    global PDR passmein A
+    global PDR A
     %PDR magnitude
 
     A.startInt = A.bufs_before*(A.dec_pts-A.infopts)+round((A.dec_pts-A.infopts)*A.sndStart); % start integrating when sound starts in the buffer
@@ -209,7 +209,7 @@ function pdr_diagnostic_plots
     grid off;
     
 function running_avg_habtrials(winnum,windur,subp)
-    global PDR passmein A
+    global PDR A
     % winnum is the window (# of A.trials to average per window)
     % windur is the window length in minutes
     A.startInt = A.bufs_before*(A.dec_pts-A.infopts)+round((A.dec_pts-A.infopts)*A.sndStart); % start integrating when sound starts in the buffer
@@ -260,7 +260,7 @@ function running_avg_habtrials(winnum,windur,subp)
     plotname = ['RunningAvg_' num2str(windur) 'MinWindow'];
 
 function parse_trials
-    global PDR passmein A
+    global PDR A
    
     
     
@@ -298,7 +298,7 @@ function parse_trials
     end
     
 function plot_average_traces
-    global PDR passmein A
+    global PDR A
  
     A.startInt = A.bufs_before*(A.dec_pts-A.infopts)+round((A.dec_pts-A.infopts)*A.sndStart); % start integrating when sound starts in the buffer
     
@@ -347,7 +347,7 @@ function plot_average_traces
     title (['Average traces of Habituating and Test Trials']);
     
 function plot_trial_traces
-    global PDR passmein A
+    global PDR A
     
     A.startInt = A.bufs_before*(A.dec_pts-A.infopts)+round((A.dec_pts-A.infopts)*A.sndStart); % start integrating when sound starts in the buffer
 
@@ -427,7 +427,7 @@ function plot_trial_traces
 
 function plot_zscores
         
-        global A PDR passmein
+        global A PDR
         
         %traceplot = figure('Name','Plot of z-scores for Each Condition','NumberTitle','off');
         %set(gcf, 'Position', [0.15 0.15 0.4*A.scrn(3) 0.4*A.scrn(4) ]);
@@ -488,7 +488,7 @@ function plot_zscores
 
 function roc_PERFCURVE(i)
 
-global PDR A passmein
+global PDR A
 
 %NOTE: MUST USE MATLAB VERSION R2010a OR LATER FOR PERFCURVE() TO WORK
 
@@ -540,7 +540,7 @@ title(['Test Separation = ' num2str(abs(PDR.LAG_hab_pos - str2num(A.trials.test{
 drawnow;
 
 function running_roc
-global PDR A passmein
+global PDR A
 
 %NOTE: MUST USE MATLAB VERSION R2010a OR LATER FOR PERFCURVE() TO WORK
 
@@ -590,7 +590,7 @@ errorbar(mean(ROC,2),std(ROC,0,2));
 % end
 
 function plot_stdshade_avg_traces
-    global PDR passmein A
+    global PDR A
     
     begintime = -(A.bufs_before*A.bufftime + A.sndStart*A.bufftime);
     endtime = (A.bufs_total*A.bufftime) - abs(begintime);
