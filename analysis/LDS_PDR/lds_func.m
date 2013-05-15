@@ -17,7 +17,7 @@ end
 function load_and_filter_data
     global PDR A
     A.numpts=PDR.buf_pts/(2^PDR.decimationfactor);
-    A.numbufs=passmein.nptsTotalPlay/(2^PDR.decimationfactor)/A.numpts;  
+    A.numbufs=PDR.npts_totalplay/(2^PDR.decimationfactor)/A.numpts;  
     button = questdlg('Use REC1 or REC2???','Choose recording filename','REC1','REC2','REC1');
     fid=fopen([A.pname PDR.filename '_' button A.ext]); A.raw_data=fread(fid,'short'); fclose(fid);
     A.trialtype=A.raw_data(1:A.numpts:size(A.raw_data));

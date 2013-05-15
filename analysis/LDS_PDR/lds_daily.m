@@ -8,9 +8,23 @@ A.ext = '.frf';
 % SELECT HEADER FILE FOR ANALYSIS
 
 current_dir = pwd;
-dt='/home/andrew/science/Alex/LDS_Project/analysis/code';
-cd ('/home/andrew/science/Alex/LDS_Project/data');
-path(path,dt);
+compID=[];
+try
+    compID=getenv('USER');
+end
+
+if(compID=='cvitanovich') % my macbook
+    code_dir='/Users/cvitanovich/Documents/MATLAB/tak-lab/analysis/LDS_PDR/';
+    data_dir='/Users/cvitanovich/Documents/MATLAB/data/';
+    analysis_dir='/Users/cvitanovich/Documents/MATLAB/analysis_data/';
+elseif(compID=='andrew') % linux desktop (Arch)
+    code_dir='/home/andrew/science/Alex/LDS_Project/analysis/code';
+    data_dir='/home/andrew/science/Alex/LDS_Project/data';
+    analysis_dir='/home/andrew/science/Alex/LDS_Project/analysis/data/';
+else
+    disp('figure out your paths!')
+end
+path(path,code_dir);
 [A.fname, A.pname] = uigetfile('*.mat', 'Select header file for daily analysis');
 global PDR
 
@@ -19,12 +33,12 @@ if A.fname==0
     return
 end
 
-A.analysis_dir = ['/home/andrew/science/Alex/LDS_Project/analysis/data/'];
+A.analysis_dir = analysis_dir;
 
 cd (A.pname)
 load(A.fname)
-if ~isempty(dt)
-    A.DATApath = dt;
+if ~isempty(code_dir)
+    A.DATApath = code_dir;
 end
 for tID=1:length(PDR.TEST_azimuths)
     A.test_info{tID} = num2str(PDR.TEST_azimuths(tID));
@@ -75,7 +89,13 @@ end
 % MAIN FIGURE SETUP
 
 A.hFig=figure;
-set(gcf,'Color',[1 1 1],'Position',[.02*A.scrn(3) .04*A.scrn(4) .20*A.scrn(3) .9*A.scrn(4)]);
+if(strcmp(compID,'andrew'))
+    set(gcf,'Color',[1 1 1],'Position',[.02*A.scrn(3) .04*A.scrn(4) .20*A.scrn(3) .9*A.scrn(4)]);
+elseif(strcmp(compID,'cvitanovich'))
+    set(gcf,'Color',[1 1 1],'Position',[.02*A.scrn(3) .04*A.scrn(4) .5*A.scrn(3) .9*A.scrn(4)]);
+else
+    disp('figure out your paths and figure sizes!')
+end
 rowz=11; colz=8;
 % trial mag subplot
 A.h(1) = subplot(rowz,colz,[73:76 81:84]);
@@ -118,10 +138,10 @@ lds_func('parse_trials');
 %***************************************************
 subplot(A.h(2));
 lds_func('plot_average_traces');
-A.hShade=figure;
-set(gcf,'Color',[1 1 1],'Position',[.6*A.scrn(3) .04*A.scrn(4) .40*A.scrn(3) .9*A.scrn(4)]);
-lds_func('plot_stdshade_avg_traces');
-PDR
+%A.hShade=figure;
+%set(gcf,'Color',[1 1 1],'Position',[.6*A.scrn(3) .04*A.scrn(4) .40*A.scrn(3) .9*A.scrn(4)]);
+%lds_func('plot_stdshade_avg_traces');
+
 figure(A.hFig);
 
 if length(A.trials.types) == 1 % there were only habit trials
@@ -189,6 +209,8 @@ if A.sflag
     cd(A.analysis_dir);
     saveas(A.hFig,[A.fname(1:end-4) '_analysis.fig']);
     saveas(A.hFig,[A.fname(1:end-4) '_analysis.png']);
+    anal_fname=[A.PDRfile '_ANALYSIS_' date '.mat'];
+    save(anal_fname,'A');
 end
-    
+
 cd(current_dir);
