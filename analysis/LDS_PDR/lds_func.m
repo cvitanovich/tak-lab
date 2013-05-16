@@ -89,7 +89,7 @@ function load_and_filter_data
     end
     
 function remove_blinks
-    global PDR A
+    global A
     %Plot fig to pick blink threshold levels
     hblink = figure('Name','Remove A.trials with Blinks','NumberTitle','off');
     set(gcf, 'Position', [0.1 0.1 0.4*A.scrn(3) 0.4*A.scrn(4)]);

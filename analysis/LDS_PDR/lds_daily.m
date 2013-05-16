@@ -15,7 +15,7 @@ end
 
 if(compID=='cvitanovich') % my macbook
     code_dir='/Users/cvitanovich/Documents/MATLAB/tak-lab/analysis/LDS_PDR/';
-    data_dir='/Users/cvitanovich/Documents/MATLAB/data/';
+    data_dir='/Users/cvitanovich/Desktop/alex_data/';
     analysis_dir='/Users/cvitanovich/Documents/MATLAB/analysis_data/';
 elseif(compID=='andrew') % linux desktop (Arch)
     code_dir='/home/andrew/science/Alex/LDS_Project/analysis/code';
@@ -25,7 +25,7 @@ else
     disp('figure out your paths!')
 end
 path(path,code_dir);
-[A.fname, A.pname] = uigetfile('*.mat', 'Select header file for daily analysis');
+[A.fname, A.pname] = uigetfile([data_dir '*.mat'], 'Select header file for daily analysis');
 global PDR
 
 if A.fname==0
@@ -156,7 +156,7 @@ else % there were test trials
     lds_func('plot_zscores');
     grid on;
 
-
+    if(0)
     %***************************************************
     % roc analysis
     %***************************************************
@@ -188,7 +188,7 @@ else % there were test trials
     xlabel('Locations'); ylabel('Percent Correct');
     %axis([-5 100 0 1]);
     title(['Summary Plot of ROC Analysis']);
-    
+    end
     
 end
 
@@ -207,10 +207,9 @@ annotation(A.hFig,'textbox',...
 % save analysis summary figure and analysis data in analysis dir
 if A.sflag
     cd(A.analysis_dir);
-    saveas(A.hFig,[A.fname(1:end-4) '_analysis.fig']);
-    saveas(A.hFig,[A.fname(1:end-4) '_analysis.png']);
-    anal_fname=[A.PDRfile '_ANALYSIS_' date '.mat'];
+    %saveas(A.hFig,[A.fname(1:end-4) '_analysis.fig']);
+    %saveas(A.hFig,[A.fname(1:end-4) '_analysis.png']);
+    anal_fname=[A.PDRfile '_ANALYSIS.mat'];
     save(anal_fname,'A');
 end
-
 cd(current_dir);
