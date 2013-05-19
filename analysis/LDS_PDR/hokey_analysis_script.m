@@ -5,7 +5,7 @@ list_dir='/Users/cvitanovich/Documents/MATLAB/tak-lab/analysis/LDS_PDR';
 ZTRIALS=[];
 ZHAB=[];
 cd(list_dir)
-fnames=textread('file_list.txt','%s',-1);
+fnames=textread('file_list925.txt','%s',-1);
 cd(anal_dir)
 nFiles=size(fnames,1);
 hWait=waitbar(0,'grabbing z-scores...');

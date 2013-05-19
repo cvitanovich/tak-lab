@@ -67,7 +67,7 @@ function load_and_filter_data
     P_data = P_data';
     A.ntrials = length(A.idx2trials);
     y = zeros(A.bufs_total*(A.dec_pts-A.infopts),A.ntrials)*NaN;
-    A.meandata = zeros(A.bufs_total*(A.dec_pts-A.infopts),A.ntrials)*NaN;
+    sA.meandata = zeros(A.bufs_total*(A.dec_pts-A.infopts),A.ntrials)*NaN;
     %filter AC noise out of trace; normalize all trial DC levels
     h0 = waitbar(0,'Hang on, filtering data...');
     % 20 Hz low pass filter:
