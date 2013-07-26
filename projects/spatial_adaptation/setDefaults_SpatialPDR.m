@@ -7,23 +7,23 @@ if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
     hrtf_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/HRTFs/Matlab_V6/';
     calib_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/calib_data/spatial_PDR/';
 else
-    code_path='C:\andrew\CORE\tak-lab\projects\spatial_adaptation\';
-    data_path='C:\andrew\pdr\data\';
-    hrtf_path='C:\andrew\CORE\tak-lab\HRTFs\Matlab_V6\';
-    calib_path='C:\andrew\CORE\tak-lab\calib_data\spatial_PDR\';
+    code_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\projects\spatial_adaptation\';
+    data_path='C:\andrew\data\';
+    hrtf_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\HRTFs\Matlab_V6\';
+    calib_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\calib_data\spatial_PDR\';
 end
     
 PDR = struct(...                            % MAIN PARAMETERS:
-    'DEBUG',1,...
+    'DEBUG',0,...                           % set to zero unless debugging without TDT!
     'jitter',0,...
     'calib',0,...                           % flag for calibrations
     'virtual',1, ...                        % flag for virtual sound presentation
     'record',1, ...                        % flag for recording pupillometer output
     'flag_adapt',1,...                     % flag for adapting stimulus
-    'ntrials',1400,...                       % # of trials in session
+    'ntrials',50,...                       % # of trials in session
     'npretrials',5,...                     % # of trials before first test trial
     'n_test_trials',[],...                  % # of test trials 
-    'buf_pts',30000,...                     % number of pts in each buffer (~0.5s)
+    'buf_pts',30000,...                     % number of pts in each buffer
     'buf_dur',[],...                        % buffer duration in ms
     'isi_buf',3,...                         % no. buffers between trials
     'isi_time',[],...                       % ISI (seconds) between trials
@@ -62,15 +62,14 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_dur',0.1,...                      % duration of test sounds (seconds)
     'TEST_ramp',5,...                       % ramp duration for test sound (should be 5ms)
     'TEST_on_delay_pts',[],...              % delay before test sound onset (TBD)
-    'TEST_trial_freq',10, ...                % test sound every x trials
+    'TEST_trial_freq',3, ...                % test sound every x trials
     'TEST_trial_jitter',0, ...              % maximum jitter in isi_buf
-    'TEST_SPLs',[-12 0 3 6 12],...          % target SPLs for test sounds
+    'TEST_SPLs',[-12 -6 -3 0 3 6 12],...          % target SPLs for test sounds
     'TEST_scales',[],...                    % scales (calculated using calibration data)
     'TEST_sound',[],...                     % test sound stored here
     'TEST_scale_sequence',[],...            % sequence of test sound scales
     'TEST_nlocs',[],...                     % no. of test locations (determined from TEST_locs list)
-    'TEST_locs',[0 -85; 0 -70; 0 -55; 0 -40; ...
-    0 -25; 0 -10; 0 5; 0 0; 0 5; 0 10; 0 25; 0 40; 0 55; 0 70; 0 85],...      % locations for test stimuli (el,az)
+    'TEST_locs',[0 0],...                   % locations for test stimuli (el,az)
     'TEST_loc_sequence',[],...              % sequence of test sound locations
     ...
     ...                                     % HRTF PARAMETERS:
