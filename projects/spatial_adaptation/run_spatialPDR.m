@@ -63,9 +63,11 @@ setDefaults_spatialPDR; % sets default values for running a session
 
 % load calibration files and calculate scales
 load([PDR.CALIB_directory PDR.CALIB_fname]);
-eval(['mAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(1,1);']);
-eval(['bAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(2,1);']);
-PDR.ADAPT_scale=round(10^((PDR.ADAPT_SPL-bAdapt+PDR.base_atten)/mAdapt));
+if(PDR.flag_adapt>0)
+    eval(['mAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(1,1);']);
+    eval(['bAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(2,1);']);
+    PDR.ADAPT_scale=round(10^((PDR.ADAPT_SPL-bAdapt+PDR.base_atten)/mAdapt));
+end
 eval(['mTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(1,1);']);
 eval(['bTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(2,1);']);
 PDR.TEST_scales=round(10.^((PDR.TEST_SPLs-bTest+PDR.base_atten)./mTest));
@@ -74,9 +76,10 @@ PDR.TEST_scales=round(10.^((PDR.TEST_SPLs-bTest+PDR.base_atten)./mTest));
 PDR.buf_dur = 1000*PDR.buf_pts/PDR.stim_Fs;
 % isi time:
 PDR.isi_time=PDR.buf_pts/PDR.stim_Fs;
-% approximate duration of adaptor prior to each test trial:
-PDR.ADAPT_dur=(PDR.isi_buf*PDR.isi_time) + (PDR.isi_time - PDR.TEST_dur)/2;
-
+if(PDR.flag_adapt>0)
+    % approximate duration of adaptor prior to each test trial:
+    PDR.ADAPT_dur=(PDR.isi_buf*PDR.isi_time) + (PDR.isi_time - PDR.TEST_dur)/2;
+end
 q=clock;
 y=num2str(q(1));y=y(3:4);
 m=num2str(q(2));if size(m,2)<2;m=['0' m];end
@@ -116,11 +119,12 @@ PDR.TEST_stop_pt = PDR.TEST_on_delay_pts+PDR.TEST_stim_pts+PDR.HRTF_nTaps;
 ptsramp=round(ramplen/1000*PDR.stim_Fs);
 on_rmp=1:-1/(ptsramp-1):0;
 off_rmp=0:1/(ptsramp-1):1;
-PDR.ADAPT_ramp = ones(1,PDR.buf_pts);
-PDR.ADAPT_ramp(1,PDR.TEST_start_pt-length(on_rmp):PDR.TEST_start_pt-1)=on_rmp;
-PDR.ADAPT_ramp(PDR.TEST_start_pt:PDR.TEST_stop_pt) = zeros(1,PDR.TEST_stop_pt-PDR.TEST_start_pt+1);
-PDR.ADAPT_ramp(1,PDR.TEST_stop_pt+1:PDR.TEST_stop_pt+length(off_rmp))=off_rmp;
-
+if(PDR.flag_adapt>0)
+    PDR.ADAPT_ramp = ones(1,PDR.buf_pts);
+    PDR.ADAPT_ramp(1,PDR.TEST_start_pt-length(on_rmp):PDR.TEST_start_pt-1)=on_rmp;
+    PDR.ADAPT_ramp(PDR.TEST_start_pt:PDR.TEST_stop_pt) = zeros(1,PDR.TEST_stop_pt-PDR.TEST_start_pt+1);
+    PDR.ADAPT_ramp(1,PDR.TEST_stop_pt+1:PDR.TEST_stop_pt+length(off_rmp))=off_rmp;
+end
 % HRTF SETUP:
 PDR.HRTF_nlines=255;
 HRTF.TestL = NaN*ones(PDR.HRTF_nlines,PDR.TEST_nlocs);
@@ -175,16 +179,18 @@ else % using another format (e.g. for 930 or 929)
     end
 end
 
-% PICK STATES FOR THE ADAPTOR
-[resulting_rms, state_list, success]=gtone_state_picker(PDR.ADAPT_coefs,PDR.stim_Fs,...
-    PDR.ADAPT_dur,PDR.buf_pts,PDR.ADAPT_nstates,HRTF.AdaptL, HRTF.AdaptR,PDR.ADAPT_target_rms);
-if(abs(resulting_rms-PDR.ADAPT_target_rms)>0.05*PDR.ADAPT_target_rms)
-    warndlg('RMS voltage not matching target rms very well!');
+if(PDR.flag_adapt>0)
+    % PICK STATES FOR THE ADAPTOR
+    [resulting_rms, state_list, success]=gtone_state_picker(PDR.ADAPT_coefs,PDR.stim_Fs,...
+        PDR.ADAPT_dur,PDR.buf_pts,PDR.ADAPT_nstates,HRTF.AdaptL, HRTF.AdaptR,PDR.ADAPT_target_rms);
+    if(abs(resulting_rms-PDR.ADAPT_target_rms)>0.05*PDR.ADAPT_target_rms)
+        warndlg('RMS voltage not matching target rms very well!');
+    end
+    if(success<0)
+        return;
+    end
+    PDR.ADAPT_state_list=state_list;
 end
-if(success<0)
-    return;
-end
-PDR.ADAPT_state_list=state_list;
 
 % Make sure the session gets a unique filename
 cnt = double('a'+0);
