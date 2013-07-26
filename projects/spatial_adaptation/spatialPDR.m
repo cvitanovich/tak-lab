@@ -1,4 +1,4 @@
- function spatialPDR
+function spatialPDR
 % A FUNCTION TO RUN A SPATIAL PDR EXPERIMENT WITH AN ADAPTOR
 global PDR TDT HRTF session
 
