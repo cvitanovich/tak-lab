@@ -126,11 +126,15 @@ for(j=1:PDR.TEST_nlocs)
     % store filtered test sounds in their buffers
     TESTLEFT(j)=TDT.n_total_buffers+1;
     TESTRIGHT(j)=TDT.n_total_buffers+2;
-    S232('allotf',TESTLEFT(j),PDR.TEST_stim_pts);
-    S232('allotf',TESTRIGHT(j),PDR.TEST_stim_pts);
-    S232('pushf',filtered_test_left,PDR.TEST_stim_pts);
+    stim_left=zeros(1,PDR.buf_pts);
+    stim_right=zeros(1,PDR.buf_pts);
+    stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt)=filtered_test_left;
+    stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt)=filtered_test_right;
+    S232('allotf',TESTLEFT(j),PDR.buf_pts);
+    S232('allotf',TESTRIGHT(j),PDR.buf_pts);
+    S232('pushf',stim_left,PDR.buf_pts);
     S232('qpopf',TESTLEFT(j));
-    S232('pushf',filtered_test_right,PDR.TEST_stim_pts);
+    S232('pushf',stim_right,PDR.buf_pts);
     S232('qpopf',TESTRIGHT(j));
     TDT.n_total_buffers=TDT.n_total_buffers+2;
 end
