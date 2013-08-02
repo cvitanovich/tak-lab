@@ -35,7 +35,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'stoptime',[], ...                     % session stop time
     'code_path',code_path,...  % path to code
     'data_path',data_path, ...     % data path (normally: c:\andrew\pdr\data normally, calib: c:\andrew\pdr\calib_data)
-    'base_atten',70,...                      % base attenuation for PA4
+    'base_atten',40,...70,...                      % base attenuation for PA4
     'filename',[],...                       % filename for session data
     'bird_id',925,...
     'hab_id',0,...
@@ -66,7 +66,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_on_delay_pts',[],...              % delay before test sound onset (TBD)
     'TEST_trial_freq',3, ...                % test sound every x trials
     'TEST_trial_jitter',0, ...              % maximum jitter in isi_buf
-    'TEST_SPLs',[-12 -6 -3 0 3 6 12],...          % target SPLs for test sounds
+    'TEST_SPLs',[20 30 40],...[-12 -6 -3 0 3 6 12],...          % target SPLs for test sounds
     'TEST_scales',[],...                    % scales (calculated using calibration data)
     'TEST_sound',[],...                     % test sound stored here
     'TEST_scale_sequence',[],...            % sequence of test sound scales

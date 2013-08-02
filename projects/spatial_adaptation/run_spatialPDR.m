@@ -135,8 +135,11 @@ HRTF.TestL = NaN*ones(1,PDR.HRTF_nlines);
 HRTF.TestR = HRTF.TestL;
 
 if(PDR.flag_adapt>0)
-    % Make FIR coefficients for Adaptor:
-    PDR.ADAPT_coefs = makeGammaFIR(PDR.stim_Fs,PDR.ADAPT_cF,PDR.ADAPT_species);
+    
+    % No longer making FIR coefficients for gammatone, because the
+    % gammatone is loaded from a *.mat file:
+    %PDR.ADAPT_coefs = makeGammaFIR(PDR.stim_Fs,PDR.ADAPT_cF,PDR.ADAPT_species);
+    
     HRTF.AdaptL = NaN*ones(1,PDR.HRTF_nlines);
     HRTF.AdaptR = NaN*ones(1,PDR.HRTF_nlines);
 else
@@ -202,22 +205,28 @@ if(max(abs(PDR.ADAPT_sound))>0.9999)
     return;
 end
 
-% Make sure the session gets a unique filename
-cnt = double('a'+0);
-while exist ([PDR.data_path PDR.filename '.mat'],'file');
-    cnt = cnt + 1;
-    if cnt > 122
-        disp(['Attempted to use filename: ' PDR.filename '.mat' ' but failed!']);
-        disp('There are already several files with similar names!');
-        PDR.filename = input('Enter a unique filename for this session: ', 's');
-        break;
-    else
-        PDR.filename(end) = char(cnt);
+% Is this an actual experiment or just testing?
+button0 = questdlg('Running an actual experiment???','','YES','NO','YES');
+if strcmp(button0,'YES')
+    % Make sure the session gets a unique filename:
+    cnt = double('a'+0);
+    while exist ([PDR.data_path PDR.filename '.mat'],'file');
+        cnt = cnt + 1;
+        if cnt > 122
+            disp(['Attempted to use filename: ' PDR.filename '.mat' ' but failed!']);
+            disp('There are already several files with similar names!');
+            PDR.filename = input('Enter a unique filename for this session: ', 's');
+            break;
+        else
+            PDR.filename(end) = char(cnt);
+        end
     end
+else
+    PDR.filename = input('Enter a unique filename for this session: ', 's');
 end
 
 button1 = questdlg(['Check that equipment is configured correctly.' ...
-    'Is it okay to continue with this session?'],'','YES','NO','YES');
+        'Is it okay to continue with this session?'],'','YES','NO','YES');
 
 if strcmp(button1,'NO')
     return
@@ -226,54 +235,51 @@ end
 %*********************************%
 %**PLOT TRIAL SEQUENCE ETC *******%
 %*********************************%
-if(0)
-    AZ=PDR.TEST_loc(2); % azimuths
-    hab = 0; % habituating location (lag)
-    session.hab_xes = find(locs == hab);
-    session.hab_yes = hab*ones(1,length(session.hab_xes));
-    session.trial_xes = find(locs ~= hab);
-    session.trial_yes = AZs(PDR.TEST_loc_sequence(session.trial_xes));
-    session.trial_param = 'Azimuth (Deg.)';
-    session.ntrials = PDR.ntrials;
-    session.min_yes = min(AZs)-10;
-    session.max_yes = max(AZs)+10;
-    session.buf_pts = PDR.buf_pts;
-    session.stim_pts=PDR.TEST_stim_pts+2*PDR.HRTF_nTaps; % stimulus plotting length
-    session.dec_fact = PDR.decimationfactor;
-    session.isi = PDR.isi_buf;
-    session.trials_to_show = 3;
-    session.sound_onset=PDR.TEST_on_delay_pts; % how many points until sound onset?
-    session.npts_totalplay=PDR.npts_totalplay;
-    session.srate=(10^6)*(1/PDR.stim_Fs); % sampling period in usec
-    session.Fs=PDR.stim_Fs;
-    session.stim_fs=PDR.stim_Fs;
-    session.zoomval=0.4;
-    session.HALT=0; % for halting the session early
-    session.confirm_halt=0; % extra safeguard for halting session
-    
-    % requires session to be declared a global
-    sessionPlots3('Initialize');
-    hold on;
-    session.ZoomOut_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
-        'Units','normalized','FontSize',8,'Position',[0.02 0.6 0.05 0.05],...
-        'Callback', 'if session.zoomval<10.1; session.zoomval=session.zoomval+0.1; end;');
-    session.ZoomIn_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
-        'Units','normalized','FontSize',8,'Position',[0.02 0.8 0.05 0.05],...
-        'Callback', 'if session.zoomval>0.1; session.zoomval=session.zoomval-0.1; end;');
-    session.HALT_btn=uicontrol(gcf,'Style','pushbutton','Tag','HALT','String','HALT!',...
-        'Units','normalized','FontSize',14,'Position',[0.02 0.4 0.05 0.05],...
-        'BackgroundColor','r','ForegroundColor','y',...
-        'Callback', 'session.HALT=1;');
-    % required to initialize sessionPlots:
-    % structure with these parameters:
-    % hab_xes, hab_yes, trial_xes, trial_yes
-    % ntrials, min_yes, max_yes
-    % bufpts, decpts, isi, trials_to_show
-    
-    % plot trial markers:
-    figure(session.hFig); subplot(session.hSub(1)); hold on;
-    plot_trials_spatialPDR(PDR);
-end
+AZ=PDR.TEST_loc(2); % azimuth of test trials
+session.trial_xes = find(PDR.TEST_scale_sequence ~= 0);
+session.trial_yes = AZ.*ones(1,length(session.trial_xes));
+session.trial_param = 'Azimuth (Deg.)';
+session.ntrials = PDR.ntrials;
+session.min_yes = -90;
+session.max_yes = 90;
+session.buf_pts = PDR.buf_pts;
+session.stim_pts=PDR.TEST_stim_pts+2*PDR.HRTF_nTaps; % stimulus plotting length
+session.dec_fact = PDR.decimationfactor;
+session.isi = PDR.isi_buf;
+session.trials_to_show = 3;
+session.sound_onset=PDR.TEST_on_delay_pts; % how many points until sound onset?
+session.npts_totalplay=PDR.npts_totalplay;
+session.srate=(10^6)*(1/PDR.stim_Fs); % sampling period in usec
+session.Fs=PDR.stim_Fs;
+session.stim_fs=PDR.stim_Fs;
+session.zoomval=0.4;
+session.HALT=0; % for halting the session early
+session.confirm_halt=0; % extra safeguard for halting session
+
+% requires session to be declared a global
+sessionPlots_v4('Initialize');
+%sessionPlots3('Initialize');
+hold on;
+session.ZoomOut_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomOut','String','Zoom -',...
+    'Units','normalized','FontSize',8,'Position',[0.02 0.6 0.05 0.05],...
+    'Callback', 'if session.zoomval<10.1; session.zoomval=session.zoomval+0.1; end;');
+session.ZoomIn_btn=uicontrol(gcf,'Style', 'pushbutton','Tag','ZoomIn','String','Zoom +',...
+    'Units','normalized','FontSize',8,'Position',[0.02 0.8 0.05 0.05],...
+    'Callback', 'if session.zoomval>0.1; session.zoomval=session.zoomval-0.1; end;');
+session.HALT_btn=uicontrol(gcf,'Style','pushbutton','Tag','HALT','String','HALT!',...
+    'Units','normalized','FontSize',14,'Position',[0.02 0.4 0.05 0.05],...
+    'BackgroundColor','r','ForegroundColor','y',...
+    'Callback', 'session.HALT=1;');
+% required to initialize sessionPlots:
+% structure with these parameters:
+% trial_xes, trial_yes
+% ntrials, min_yes, max_yes
+% bufpts, decpts, isi, trials_to_show
+
+% plot trial markers:
+figure(session.hFig); subplot(session.hSub(1)); hold on;
+plot_trials_spatialPDR(PDR);
+
 % *********************************************************************
 % *********************************************************************
 %       Start Main Loop Here

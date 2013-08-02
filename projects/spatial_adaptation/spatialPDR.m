@@ -27,14 +27,17 @@ end
 TDT.outFN{1}=[PDR.data_path PDR.filename '_REC1' type];
 TDT.outFN{2}=[PDR.data_path PDR.filename '_REC2' type];
 TDT.ntrials=PDR.ntrials;
-TDT.srate=1e6 / TDT.Fs;
+TDT.srate=1e6 / TDT.Fs; % srate is in usecs
 TDT.display_flag=1; % flag to display trace during session
 TDT.max_signal_jitter=PDR.jitter;
 TDT.disp_proc_time=1; % flag to display processing time for each buffer segment
-TDT.hab_id=PDR.hab_id;
+TDT.hab_id=PDR.hab_id; % ID for habituating trials (in this case... scale=zero)
 % test stimulus variable:
 TDT.stim_left=zeros(1,PDR.buf_pts);
 TDT.stim_right=TDT.stim_left;
+% buffer counter
+TDT.buf_cnt=0;
+TDT.total_buffers=TDT.npts_total_play*PDR.buf_pts;
 
 %% CHECK PARAMETERS
 out=check_params;
@@ -106,6 +109,25 @@ TDT.n_total_buffers=TDT.n_total_buffers+1;
 clear SPOS;
 s232('dropall');
 
+%% LINEAR GATE FOR FIRST/LAST ADAPTOR BUFFERS
+% not to be confused with the ramp for the empty segment of each trial
+TDT.gate_dur=10.0; % 10 ms gate duration
+TDT.gate_pts=1E3*TDT.gate_dur/(TDT.srate); % gate duration in ms
+step=1.0/TDT.gate_pts;
+% create and store gates ahead of time
+TDT.gate_on=TDT.n_total_buffers+1;
+TDT.gate_off=TDT.n_total_buffers+2;
+TDT.n_total_buffers=TDT.n_total_buffers+2;
+s232('dpush',TDT.gate_pts);
+s232('fill',0.0,step); % linear ramp for ON gate (0...1)
+s232('allotf',TDT.gate_on,TDT.gate_pts);
+s232('qpopf',TDT.gate_on);
+s232('dpush',TDT.gate_pts);
+s232('fill',(1.0-step),-step); % linear ramp for OFF gate (1...0)
+s232('allotf',TDT.gate_off,TDT.gate_pts);
+s232('qpopf',TDT.gate_off);
+s232('dropall');
+
 if(~DEBUG)
     %% ZERO PLAY BUFFERS
     zero_play_buffers(TDT);
@@ -121,6 +143,9 @@ while(seekpos < TDT.npts_total_play)
     % cycle through double buffering sequence
     last=cycle;
     cycle=mod(cycle,2)+1;
+    
+    % update buffer counter
+    TDT.buf_cnt=TDT.buf_cnt+1;
     
     if(~DEBUG)
         % WAIT FOR LAST BUFFER TO FINISH
@@ -141,14 +166,14 @@ while(seekpos < TDT.npts_total_play)
     % COUNTDOWN (in seconds) TO NEXT TEST TRIAL
     cntdown=update_countdown(cnt,Signalcnt);
     % DISPLAY SESSION INFO
-    %disp_session_info(cntdown,seekpos);
+    disp_session_info(cntdown,seekpos);
     
     % TEST TRIAL SCALE
     if(cnt==PDR.isi_buf)
         signalScale=PDR.TEST_scale_sequence(Signalcnt);
         % plot a marker on trial sequence plot
-        %session.trialcnt=Signalcnt;
-        %sessionPlots3('Update Trial Plot');
+        session.trialcnt=Signalcnt;
+        sessionPlots_v4('Update Trial Plot');
     end
 
     % SETUP ADAPTOR
@@ -184,7 +209,7 @@ while(seekpos < TDT.npts_total_play)
         else
             session.test_flag=0;
         end
-        %sessionPlots3('Update Trace Plot');
+        sessionPlots_v4('Update Trace Plot');
         % Second Record Channel:
         record_buffer(2, REC_B(cycle),DEC_B(cycle),TDT,SignalPlayFlag,0);
     end
@@ -208,19 +233,18 @@ while(seekpos < TDT.npts_total_play)
     seekpos = seekpos + PDR.buf_pts;
 
     % CHECK FOR HALT
-    if(0)
-        if(session.HALT==1 && session.confirm_halt==0)
-            confirmdlg;
-        end
-        if(session.HALT==1 && session.confirm_halt==1)
-            seekpos=Inf;
-        end
+    if(session.HALT==1 && session.confirm_halt==0)
+        confirmdlg;
     end
+    if(session.HALT==1 && session.confirm_halt==1)
+        seekpos=Inf;
+    end
+    
     % PROCESSING TIME
     if(TDT.disp_proc_time)
         t=toc;
-        %session.proc_time(end+1)=t;
-        %sessionPlots3('Update Session Info');
+        session.proc_time(end+1)=t;
+        sessionPlots_v4('Update Session Info');
     end
     if(Signalcnt>TDT.ntrials); break; end;
     
@@ -251,7 +275,7 @@ min=floor(rem_time/60); sec=rem_time-(60*min);
 session.rem_time=[min sec];
 min=floor(cntdown/60); sec=cntdown-(60*min);
 session.next_test_trial=[min sec];
-sessionPlots3('Update Session Info');
+sessionPlots_v4('Update Session Info');
 
 function confirmdlg
 global session
@@ -299,6 +323,17 @@ if(PDR.flag_adapt>0)
     s232('qpushpartf',TDT.adapt_buf,SPOS,PDR.buf_pts); % pop correct adaptor segment to stack
     if(cnt==PDR.isi_buf)
         S232('qpushf',TDT.ramp_buffer); S232('mult'); % multiply adaptor with ramp if isi reached
+    end
+    if(TDT.buf_cnt==1)
+        s232('qpushf',TDT.gate_on); % ramp ON first buffer in expt
+        s232('mult');
+    end
+    if(TDT.buf_cnt==TDT.total_buffers)
+        n=s232('topsize');
+        s232('block',(n-TDT.gate_pts),(n-1));
+        s232('qpushf',TDT.gate_off); % ramp OFF last buffer in expt
+        s232('mult');
+        s232('noblock');
     end
     S232('scale',PDR.ADAPT_scale); % scale adaptor
 else
@@ -379,7 +414,7 @@ DSP_Adapt=1;
 % clear stack
 s232('dropall');
 
-% idle dsps
+% idle ALL dsps
 S232('PD1idleDSP',TDT.din,hex2dec('0FFFFFFF'));
 
 % load test coefs to DSP
