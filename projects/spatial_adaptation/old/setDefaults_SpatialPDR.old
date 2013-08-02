@@ -42,7 +42,6 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'sounds_path',sounds_path,...           % path to sound files
     ...
     ...                                     % ADAPTING STIMULUS PARAMETERS:
-    'ADAPT_file',[sounds_path 'gtone_B.mat'],... % file with adaptor sound
     'ADAPT_loc',[0 0],...                   % location of adapting stimulus
     'ADAPT_species','owl',...               % species
     'ADAPT_soundtype','GTONE',...            % type of sound for adapting stimulus
@@ -51,10 +50,10 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ADAPT_SPL',6,...                      % SPL for adaptor
     'ADAPT_scale',[],...                    % scale for adaptor (calculated using calibration data)
     'ADAPT_ramp',5,...                      % ramp for trial segments
+    'ADAPT_nstates',16,...                  % no. of desired states for adaptor
     'ADAPT_dur',[],...                      % adaptor duration in seconds (calculated from isi_buf) in seconds
     'ADAPT_target_rms',0.1,...              % desired rms amplitude for adaptor (before scaling)
     'ADAPT_seeds',[],...                    % seed for generating adaptor
-    'ADAPT_sound',[],...
     ...
     ...                                     % TEST STIMULUS PARAMETERS:
     'TEST_soundtype','OCTAVE',...           % type of test sound ('gammatone', 'octave', 'broadband', etc.)
@@ -70,7 +69,9 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_scales',[],...                    % scales (calculated using calibration data)
     'TEST_sound',[],...                     % test sound stored here
     'TEST_scale_sequence',[],...            % sequence of test sound scales
-    'TEST_loc',[0 0],...                   % location for test stimuli (el,az)
+    'TEST_nlocs',[],...                     % no. of test locations (determined from TEST_locs list)
+    'TEST_locs',[0 0],...                   % locations for test stimuli (el,az)
+    'TEST_loc_sequence',[],...              % sequence of test sound locations
     ...
     ...                                     % HRTF PARAMETERS:
     'HRTF_directory',hrtf_path,...  % directory of HRTF coefficient files
@@ -79,6 +80,9 @@ PDR = struct(...                            % MAIN PARAMETERS:
     ...
     'CALIB_directory',calib_path,...    % directory for calibration files
     'CALIB_fname',[]);
+
+% calculate # locs
+PDR.TEST_nlocs=size(PDR.TEST_locs,1);
 
 % Select HRTF and Calib filenames:
 switch(PDR.bird_id)

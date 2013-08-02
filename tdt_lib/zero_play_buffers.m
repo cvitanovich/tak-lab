@@ -12,6 +12,6 @@ for ch=1:TDT.nPlayChannels
 	for buf=1:nbuffers
 		S232('dpush',TDT.playpts{ch}(buf));
 		S232('value',0);
-		S232('qpop16',TDT.stim_buffers{ch}(buf));
+        S232('qpop16',TDT.stim_buffers{ch}(buf));
 	end
 end
