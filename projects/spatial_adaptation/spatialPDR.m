@@ -136,31 +136,33 @@ if(~DEBUG)
 end
 
 %% MAIN LOOP
-seekpos=0;
+seekpos=0; writeflag=0; readflag=0;
 cycle=2; % cycle through double buffering seq
 while(seekpos < TDT.npts_total_play)
-
+ 
     % cycle through double buffering sequence
     last=cycle;
     cycle=mod(cycle,2)+1;
-    
-    % update buffer counter
-    TDT.buf_cnt=TDT.buf_cnt+1;
     
     if(~DEBUG)
         % WAIT FOR LAST BUFFER TO FINISH
         while(check_play(TDT.nPlayChannels,[TEST_PLAY(cycle) ADAPT_PLAY(cycle)])); end;
     end
     
+    % proc time
     tic;
+    
+    % update buffer counter
+    TDT.buf_cnt=TDT.buf_cnt+1;
+    
     
     % SET FLAGS
     SignalPlayFlag=0;
-    if(signalScale>0)
-        readflag=1;
-    elseif(readflag>0)
-        readflag=0;
-        SignalPlayFlag=1;
+    if(writeflag==1) % currently playing trial buffer
+        readflag=1; % set read flag
+    elseif(readflag==1) % last buffer played was a trial buffer
+        SignalPlayFlag=1; % insert a one at beginning of record buffer to indicate trial occured
+        readflag=0; % reset read flag
     end
     
     % COUNTDOWN (in seconds) TO NEXT TEST TRIAL
@@ -170,10 +172,14 @@ while(seekpos < TDT.npts_total_play)
     
     % TEST TRIAL SCALE
     if(cnt==PDR.isi_buf)
+        writeflag=1; % next buffer played will be a trial buffer
         signalScale=PDR.TEST_scale_sequence(Signalcnt);
         % plot a marker on trial sequence plot
         session.trialcnt=Signalcnt;
         sessionPlots_v4('Update Trial Plot');
+    else
+        signalScale=0;
+        writeflag=0; % not writing trial buffer
     end
 
     % SETUP ADAPTOR
@@ -187,31 +193,33 @@ while(seekpos < TDT.npts_total_play)
     if(~DEBUG)
         update_buffers(TEST_PLAY(cycle),ADAPT_PLAY(cycle),cnt,Signalcnt,signalScale,SPOS);
     end
-
+  
+    % RECORD PDR TRACE
+    if(record && ~DEBUG)
+        % First Record Channel:
+        session.last_buffer=record_buffer(1, REC_A(cycle),DEC_A(cycle),TDT,SignalPlayFlag,TDT.display_flag);
+        if(SignalPlayFlag==1)
+            session.trial_flag=Inf; % no test sound (DEFAULT value)
+            if((Signalcnt-1)>0)
+                trial=Signalcnt-1;
+                if(PDR.TEST_scale_sequence(trial)>0)
+                    session.trial_flag=1; % test sound affirmative
+                end
+            end
+        else
+            session.trial_flag=0;
+        end
+        sessionPlots_v4('Update Trace Plot');
+        % Second Record Channel:
+        record_buffer(2, REC_B(cycle),DEC_B(cycle),TDT,SignalPlayFlag,0);
+    end
+    
     % UPDATE ISI COUNTER AND SIGNAL COUNT
     if(cnt==PDR.isi_buf)
         cnt=round(2*TDT.max_signal_jitter*rand-TDT.max_signal_jitter); % +/- max
         Signalcnt=Signalcnt+1;
     else
         cnt=cnt+1;
-    end
-    
-    % RECORD PDR TRACE
-    if(record && ~DEBUG)
-        % First Record Channel:
-        session.last_buffer=record_buffer(1, REC_A(cycle),DEC_A(cycle),TDT,SignalPlayFlag,TDT.display_flag);
-        if(SignalPlayFlag==1)
-            if(signalScale~=0)
-                session.test_flag=1;
-            else
-                session.test_flag=Inf;
-            end
-        else
-            session.test_flag=0;
-        end
-        sessionPlots_v4('Update Trace Plot');
-        % Second Record Channel:
-        record_buffer(2, REC_B(cycle),DEC_B(cycle),TDT,SignalPlayFlag,0);
     end
     
     % CHECK IF CORRECT BUFFERS ARE PLAYING

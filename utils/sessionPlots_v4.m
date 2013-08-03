@@ -84,7 +84,7 @@ switch options
         
         % initialize variable for latest buffer
         session.last_buffer=zeros(1,session.decpts);
-        session.test_flag=0;
+        session.trial_flag=0;
         session.flag_list=[];
         session.test_flag_list=[];
         
@@ -148,9 +148,11 @@ switch options
         tmp=find(session.flag_list>=0); session.flag_list=session.flag_list(tmp);
         session.test_flag_list=session.test_flag_list-session.decpts;
         tmp=find(session.test_flag_list>=0); session.test_flag_list=session.test_flag_list(tmp);
-        if session.test_flag==1
+        if session.trial_flag==Inf
+            % no test sound
             session.flag_list=[session.trace_xes(end-2-session.decpts+ceil(session.sound_onset/2^session.dec_fact)) session.flag_list]; %[session.dec_xes(end-2-session.decpts+1+ceil(session.sound_onset/2^session.dec_fact)) session.flag_list];
-        elseif session.test_flag==Inf
+        elseif session.trial_flag==1
+            % test sound affirmative
             session.test_flag_list=[session.trace_xes(end-2-session.decpts+ceil(session.sound_onset/2^session.dec_fact)) session.test_flag_list];%[session.dec_xes(end-2-session.decpts+1+ceil(session.sound_onset/2^session.dec_fact)) session.test_flag_list];
         end
         % update trace plot
@@ -183,12 +185,12 @@ switch options
         temp=find(session.flag_list>=start);
         for i=1:length(temp)
             session.hMark(i)=line([session.flag_list(temp(i)) session.flag_list(temp(i))],...
-                [session.ymin session.ymax],'LineWidth',1,'Color','g','LineStyle','-','Tag','marker');
+                [session.ymin session.ymax],'LineWidth',1,'Color','r','LineStyle','-','Tag','marker');
         end
         temp2=find(session.test_flag_list>=start);
         for i=1:length(temp2)
             session.hMark2(i)=line([session.test_flag_list(temp2(i)) session.test_flag_list(temp2(i))],...
-                [session.ymin session.ymax],'LineWidth',1,'Color','r','LineStyle','-','Tag','marker');
+                [session.ymin session.ymax],'LineWidth',1,'Color','g','LineStyle','-','Tag','marker');
         end
         drawnow;
         

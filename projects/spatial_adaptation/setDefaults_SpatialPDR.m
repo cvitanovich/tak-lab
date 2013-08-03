@@ -20,8 +20,8 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'virtual',1, ...                        % flag for virtual sound presentation
     'record',1, ...                        % flag for recording pupillometer output
     'flag_adapt',1,...                     % flag for adapting stimulus
-    'ntrials',50,...                       % # of trials in session
-    'npretrials',5,...                     % # of trials before first test trial
+    'ntrials',10,...                       % # of trials in session
+    'npretrials',2,...                     % # of trials before first test trial
     'n_test_trials',[],...                  % # of test trials 
     'buf_pts',30000,...                     % number of pts in each buffer
     'buf_dur',[],...                        % buffer duration in ms
@@ -48,7 +48,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ADAPT_soundtype','GTONE',...            % type of sound for adapting stimulus
     'ADAPT_cF',6000,...                     % center frequency (Hz) (if relevant)
     'ADAPT_coefs',[],...                    % FIR coefficients to generate adapting stimulus
-    'ADAPT_SPL',6,...                      % SPL for adaptor
+    'ADAPT_SPL',30,...                      % SPL for adaptor
     'ADAPT_scale',[],...                    % scale for adaptor (calculated using calibration data)
     'ADAPT_ramp',5,...                      % ramp for trial segments
     'ADAPT_dur',[],...                      % adaptor duration in seconds (calculated from isi_buf) in seconds
