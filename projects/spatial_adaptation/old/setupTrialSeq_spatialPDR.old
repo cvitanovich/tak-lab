@@ -41,7 +41,15 @@ while setup
     start = PDR.npretrials+1;
     stop = PDR.ntrials+1 - mod(PDR.ntrials-PDR.npretrials+1,PDR.TEST_trial_freq);
     nm = floor((stop - start)/PDR.TEST_trial_freq)+1;
-       
+    
+    % randomized sequence of locations:
+    loc_seq = zeros(1,PDR.ntrials+1);
+    for i = start:PDR.TEST_trial_freq:stop
+        loc_seq(i) = round(1 + (PDR.TEST_nlocs - 1) * rand(1)); % gives a random integer indicating trial loc IDs
+    end
+    
+    PDR.TEST_loc_sequence = loc_seq(1:PDR.ntrials+1);
+    
     % run script to plot trials
     screen_size = get(0, 'ScreenSize'); hFig = figure;
     set(hFig, 'Position', [0.05*screen_size(3) 0.05*screen_size(4) 0.7*screen_size(3) 0.8*screen_size(4)] );

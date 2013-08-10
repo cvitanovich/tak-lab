@@ -2,12 +2,8 @@ function spatialPDR
 % A FUNCTION TO RUN A SPATIAL PDR EXPERIMENT WITH AN ADAPTOR
 global PDR TDT HRTF session
 
-
 % DEBUGGING FLAG TO SKIP TDT INSTRUCTIONS
 DEBUG=PDR.DEBUG;
-if(DEBUG)
- 	% SET ATTENS & SCALES, maybe??? (FIX)
-end
 
 %% INITIATE TDT PARAMETERS HERE
 TDT.nPlayChannels=2;
@@ -23,22 +19,25 @@ TDT.din = 1;
 TDT.Fs = PDR.stim_Fs;
 TDT.npts_total_play=PDR.npts_totalplay;
 % data storage files:
-if PDR.virtual
+if(PDR.virtual==1)
     type='.vrt';
 else
     type='.frf';
 end
-TDT.outFN{1}=[PDR.filename '_REC1' type];
-TDT.outFN{2}=[PDR.filename '_REC2' type];
+TDT.outFN{1}=[PDR.data_path PDR.filename '_REC1' type];
+TDT.outFN{2}=[PDR.data_path PDR.filename '_REC2' type];
 TDT.ntrials=PDR.ntrials;
-TDT.srate=1e6 / TDT.Fs;
+TDT.srate=1e6 / TDT.Fs; % srate is in usecs
 TDT.display_flag=1; % flag to display trace during session
 TDT.max_signal_jitter=PDR.jitter;
 TDT.disp_proc_time=1; % flag to display processing time for each buffer segment
-TDT.hab_id=PDR.hab_id;
+TDT.hab_id=PDR.hab_id; % ID for habituating trials (in this case... scale=zero)
 % test stimulus variable:
 TDT.stim_left=zeros(1,PDR.buf_pts);
 TDT.stim_right=TDT.stim_left;
+% buffer counter
+TDT.buf_cnt=0;
+TDT.total_buffers=TDT.npts_total_play*PDR.buf_pts;
 
 %% CHECK PARAMETERS
 out=check_params;
@@ -54,23 +53,6 @@ signalScale=0;
 record=(TDT.nRecChannels>0);
 cnt=1; % ISI counter
 
-if(PDR.flag_adapt>0)
-    %% ADAPTOR FILTERING PARAMS
-    % recording adaptor sequence:
-    PDR.ADAPT_state_seq=[];
-    % initial state (picked randomly from list of adaptor states)
-    rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
-    adapt_state = PDR.ADAPT_state_list(rand_idx);
-    PDR.ADAPT_state_seq(end+1)=rand_idx;
-    % circular buffer for continuous filtered adaptor:
-    CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
-    % circular buffers for HRTF filtering (left/right):
-    CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
-else
-    adapt_left=[];
-    adapt_right=[];
-end
-
 if(~DEBUG) % for debugging without the TDT
     %% INITIALIZE TDT
     out=TDT_init;
@@ -78,16 +60,20 @@ if(~DEBUG) % for debugging without the TDT
     
     %% INITIALIZE BUFFERS
     TDT=TDT_buffers(TDT);
-    LEFT_PLAY = [TDT.stim_buffers{1}(1) TDT.stim_buffers{1}(2)];
-    RIGHT_PLAY = [TDT.stim_buffers{2}(1) TDT.stim_buffers{2}(2)];
+    % important: since I set this up to use PD1 for HRTF filtering,
+    % the play channels now correspond with (a) TEST and (b) ADAPTOR
+    TEST_PLAY = [TDT.stim_buffers{1}(1) TDT.stim_buffers{1}(2)];
+    ADAPT_PLAY = [TDT.stim_buffers{2}(1) TDT.stim_buffers{2}(2)];
     REC_A = [TDT.rec_buffers{1}(1) TDT.rec_buffers{1}(2)];
     REC_B = [TDT.rec_buffers{2}(1) TDT.rec_buffers{2}(2)];
     DEC_A = [TDT.dec_buffers{1}(1) TDT.dec_buffers{1}(2)];
     DEC_B = [TDT.dec_buffers{2}(1) TDT.dec_buffers{2}(2)];
     
     %% INITIALIZE PD1
-    PD1_init(TDT);
-    
+    PD1_Route1(TDT); % routing commands for PD1
+
+    %% LOAD HRTF COEFS TO PD1
+    load_HRTF_coefs(HRTF);
     
     %% SET ATTENS
     TDT.attens=[PDR.base_atten PDR.base_atten];
@@ -102,130 +88,132 @@ if(~DEBUG) % for debugging without the TDT
         TDT.n_total_buffers=TDT.n_total_buffers+1;
     end
 end
-    
-%% FILTER TEST SOUNDS WITH HRTFS
-% buffer assignments for TDT
-% zeros added later to get buffer size = PDR.buf_pts!!!!
-%TESTLEFT=zeros(PDR.TEST_nlocs,PDR.TEST_stim_pts+2*PDR.HRTF_nTaps);
-TESTLEFT=zeros(1,PDR.TEST_nlocs);
-TESTRIGHT=TESTLEFT;
-filtered_test_left=zeros(1,PDR.TEST_stim_pts+2*PDR.HRTF_nTaps);
-filtered_test_right=filtered_test_left;
-% loop through test sounds
-for(j=1:PDR.TEST_nlocs)
-    % filter each test sound with HRTFS & Store on AP2 Card
-    filtered_test_left=filter(HRTF.TestL(:,j),1,PDR.TEST_sound);
-    filtered_test_right=filter(HRTF.TestR(:,j),1,PDR.TEST_sound);
-    % get rms of stimulus (ignoring empty padding for HRIR filtering)
-    tmp_Lt=find(filtered_test_left~=0); tmp_Rt=find(filtered_test_right~=0);
-    rms_val=(sqrt(mean(filtered_test_left(tmp_Lt(1):tmp_Lt(end)).^2))+...
-        sqrt(mean(filtered_test_right(tmp_Rt(1):tmp_Rt(end)).^2)))/2;
-    filtered_test_left = (PDR.TEST_target_rms/rms_val).*filtered_test_left;
-    filtered_test_right = (PDR.TEST_target_rms/rms_val).*filtered_test_right;
-    
-    % store filtered test sounds in their buffers
-    TESTLEFT(j)=TDT.n_total_buffers+1;
-    TESTRIGHT(j)=TDT.n_total_buffers+2;
-    stim_left=zeros(1,PDR.buf_pts);
-    stim_right=zeros(1,PDR.buf_pts);
-    stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt)=filtered_test_left;
-    stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt)=filtered_test_right;
-    S232('allotf',TESTLEFT(j),PDR.buf_pts);
-    S232('allotf',TESTRIGHT(j),PDR.buf_pts);
-    S232('pushf',stim_left,PDR.buf_pts);
-    S232('qpopf',TESTLEFT(j));
-    S232('pushf',stim_right,PDR.buf_pts);
-    S232('qpopf',TESTRIGHT(j));
-    TDT.n_total_buffers=TDT.n_total_buffers+2;
-end
-clear filtered_test_left filtered_test_right
+   
+%% store test sound on AP2
+s232('dropall');
+TDT.test_buf=TDT.n_total_buffers+1;
+s232('allotf',TDT.test_buf,PDR.buf_pts);
+s232('pushf',PDR.TEST_sound,PDR.buf_pts);
+s232('qpopf',TDT.test_buf);
+TDT.n_total_buffers=TDT.n_total_buffers+1;
+
+%% store adaptor on AP2
+s232('dropall');
+TDT.adapt_buf=TDT.n_total_buffers+1;
+adapt_pts=length(PDR.ADAPT_sound);
+s232('allotf',TDT.adapt_buf,adapt_pts);
+s232('pushf',PDR.ADAPT_sound,adapt_pts);
+s232('qpopf',TDT.adapt_buf);
+TDT.n_total_buffers=TDT.n_total_buffers+1;
+% clear adaptor pos. spec
+clear SPOS;
+s232('dropall');
+
+%% LINEAR GATE FOR FIRST/LAST ADAPTOR BUFFERS
+% not to be confused with the ramp for the empty segment of each trial
+TDT.gate_dur=10.0; % 10 ms gate duration
+TDT.gate_pts=1E3*TDT.gate_dur/(TDT.srate); % gate duration in ms
+step=1.0/TDT.gate_pts;
+% create and store gates ahead of time
+TDT.gate_on=TDT.n_total_buffers+1;
+TDT.gate_off=TDT.n_total_buffers+2;
+TDT.n_total_buffers=TDT.n_total_buffers+2;
+s232('dpush',TDT.gate_pts);
+s232('fill',0.0,step); % linear ramp for ON gate (0...1)
+s232('allotf',TDT.gate_on,TDT.gate_pts);
+s232('qpopf',TDT.gate_on);
+s232('dpush',TDT.gate_pts);
+s232('fill',(1.0-step),-step); % linear ramp for OFF gate (1...0)
+s232('allotf',TDT.gate_off,TDT.gate_pts);
+s232('qpopf',TDT.gate_off);
+s232('dropall');
 
 if(~DEBUG)
     %% ZERO PLAY BUFFERS
     zero_play_buffers(TDT);
-   
     %% START SEQUENCED PLAY
     init_sequenced_play(TDT);
 end
 
 %% MAIN LOOP
-seekpos=0;
+seekpos=0; writeflag=0; readflag=0;
+cycle=2; % cycle through double buffering seq
 while(seekpos < TDT.npts_total_play)
+ 
+    % cycle through double buffering sequence
+    last=cycle;
+    cycle=mod(cycle,2)+1;
+    
     if(~DEBUG)
         % WAIT FOR LAST BUFFER TO FINISH
-        while(check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)])); end;
+        while(check_play(TDT.nPlayChannels,[TEST_PLAY(cycle) ADAPT_PLAY(cycle)])); end;
     end
     
+    % proc time
     tic;
+    
+    % update buffer counter
+    TDT.buf_cnt=TDT.buf_cnt+1;
+    
     
     % SET FLAGS
     SignalPlayFlag=0;
-    if(signalScale>0)
-        readflag=1;
-    elseif(readflag>0)
-        readflag=0;
-        SignalPlayFlag=1;
+    if(writeflag==1) % currently playing trial buffer
+        readflag=1; % set read flag
+    elseif(readflag==1) % last buffer played was a trial buffer
+        SignalPlayFlag=1; % insert a one at beginning of record buffer to indicate trial occured
+        readflag=0; % reset read flag
     end
+    
     % COUNTDOWN (in seconds) TO NEXT TEST TRIAL
     cntdown=update_countdown(cnt,Signalcnt);
     % DISPLAY SESSION INFO
     disp_session_info(cntdown,seekpos);
     
     % TEST TRIAL SCALE
-    
-    TDT.stim_left=zeros(1,PDR.buf_pts);
-    TDT.stim_right=zeros(1,PDR.buf_pts);
-    session.stim_left=zeros(1,session.stim_pts);
-    session.stim_right=zeros(1,session.stim_pts);
     if(cnt==PDR.isi_buf)
-        loc=PDR.TEST_loc_sequence(Signalcnt);
-        if(loc~=0)
-            signalScale=PDR.TEST_scale_sequence(Signalcnt);
-            TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTLEFT(loc,:);
-            TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTRIGHT(loc,:);
-        else % not playing test sound in this trial!
-            signalScale=0;
-        end
-        % scale test
-        TDT.stim_left=round(signalScale.*TDT.stim_left);
-        TDT.stim_right=round(signalScale.*TDT.stim_right);
+        writeflag=1; % next buffer played will be a trial buffer
+        signalScale=PDR.TEST_scale_sequence(Signalcnt);
         % plot a marker on trial sequence plot
         session.trialcnt=Signalcnt;
-        session.trialval=loc;
-        %sessionPlots3('Update Trial Plot');
-        % plot sound buffers:
-        session.stim_left=TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt);
-        session.stim_right=TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt);
-        %sessionPlots3('Update Stim Plot');
+        sessionPlots_v4('Update Trial Plot');
+    else
+        signalScale=0;
+        writeflag=0; % not writing trial buffer
     end
 
     % SETUP ADAPTOR
-    
-    if(cnt~=PDR.isi_buf && PDR.flag_adapt>0)
-        [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
-    elseif(cnt==PDR.isi_buf && PDR.flag_adapt>0)
-        % clear circular buffers & set new seed value
-        rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
-        adapt_state = PDR.ADAPT_state_list(rand_idx);
-        PDR.ADAPT_state_seq(end+1)=rand_idx; % save state sequence
-        CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
-        CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
-        % paste prior/new buffers together (the trial ramp will remove any
-        % possible discontinuities in the adaptor)
-        [adapt_state, aleft_new, aright_new, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
-        adapt_left=[adapt_left(1:floor(end/2)) ...
-            aleft_new(ceil(end/2):end)];
-        adapt_right=[adapt_left(1:floor(end/2)) ...
-            aright_new(ceil(end/2):end)];
+    if( ~exist('SPOS') || ( (SPOS+PDR.buf_pts+1) > adapt_pts ) )
+        SPOS=0; % initialize specified portion of adaptor to use current buffer to position zero
+    else
+        SPOS=SPOS+PDR.buf_pts; % increment SPOS for next adaptor segment
     end
 
+    % UPDATE PLAY BUFFERS
     if(~DEBUG)
-        % LEFT CHANNEL BUFFER
-        update_buffer(LEFT_PLAY(1),adapt_left,TDT.stim_left,cnt,Signalcnt,signalScale);
-        % RIGHT CHANNEL BUFFER
-        update_buffer(RIGHT_PLAY(1),adapt_right,TDT.stim_right,cnt,Signalcnt,signalScale);
+        update_buffers(TEST_PLAY(cycle),ADAPT_PLAY(cycle),cnt,Signalcnt,signalScale,SPOS);
     end
-
+  
+    % RECORD PDR TRACE
+    if(record && ~DEBUG)
+        % First Record Channel:
+        session.last_buffer=record_buffer(1, REC_A(cycle),DEC_A(cycle),TDT,SignalPlayFlag,TDT.display_flag);
+        if(SignalPlayFlag==1)
+            session.trial_flag=Inf; % no test sound (DEFAULT value)
+            if((Signalcnt-1)>0)
+                trial=Signalcnt-1;
+                if(PDR.TEST_scale_sequence(trial)>0)
+                    session.trial_flag=1; % test sound affirmative
+                end
+            end
+        else
+            session.trial_flag=0;
+        end
+        sessionPlots_v4('Update Trace Plot');
+        % Second Record Channel:
+        record_buffer(2, REC_B(cycle),DEC_B(cycle),TDT,SignalPlayFlag,0);
+    end
+    
     % UPDATE ISI COUNTER AND SIGNAL COUNT
     if(cnt==PDR.isi_buf)
         cnt=round(2*TDT.max_signal_jitter*rand-TDT.max_signal_jitter); % +/- max
@@ -233,31 +221,25 @@ while(seekpos < TDT.npts_total_play)
     else
         cnt=cnt+1;
     end
-    % RECORD PDR TRACE
-    if(record && ~DEBUG)
-        % First Record Channel:
-        ch=1; buf=1;
-        session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),TDT,SignalPlayFlag,TDT.display_flag);
-        if(SignalPlayFlag==1)
-            if(PDR.TEST_loc_sequence(Signalcnt)==TDT.hab_id)
-                session.test_flag=1;
-            else
-                session.test_flag=Inf;
+    
+    % CHECK IF CORRECT BUFFERS ARE PLAYING
+    if(~DEBUG)
+        if(~check_play(TDT.nPlayChannels,[TEST_PLAY(last) ADAPT_PLAY(last)]))
+            str=[];
+            for(k=1:TDT.nPlayChannels)
+                p=S232('playseg',k);
+                str=[str 'Ch ' num2str(k) ' playing buffer ' num2str(p) ' '];
             end
-        else
-            session.test_flag=0;
+            disp(str);
+            disp(sprintf('Got %.2f percent of the way',seekpos/TDT.npts_total_play));
+            disp('APcard too slow? Or outFNs incorrect?');
+            break;
         end
-        %sessionPlots3('Update Trace Plot');
-        % Second Record Channel:
-        ch=2; buf=1;
-        record_buffer(ch, REC_B(buf),DEC_B(buf),TDT,SignalPlayFlag,0);
     end
     
     % UPDATE SEEK POSITION
     seekpos = seekpos + PDR.buf_pts;
-    
 
-    
     % CHECK FOR HALT
     if(session.HALT==1 && session.confirm_halt==0)
         confirmdlg;
@@ -270,149 +252,15 @@ while(seekpos < TDT.npts_total_play)
     if(TDT.disp_proc_time)
         t=toc;
         session.proc_time(end+1)=t;
-        sessionPlots3('Update Session Info');
+        sessionPlots_v4('Update Session Info');
     end
-    
-    if(seekpos<TDT.npts_total_play)
-        if(~DEBUG)
-            % WAIT FOR LAST BUFFER TO FINISH
-            while(check_play(TDT.nPlayChannels,[LEFT_PLAY(2) RIGHT_PLAY(2)])); end;
-        end
-
-        % SET FLAGS
-        SignalPlayFlag=0;
-        if(signalScale>0)
-            readflag=1;
-        elseif(readflag>0)
-            readflag=0;
-            SignalPlayFlag=1;
-        end
-        % COUNTDOWN (in seconds) TO NEXT TEST TRIAL
-        cntdown=update_countdown(cnt,Signalcnt);
-        % DISPLAY SESSION INFO
-        disp_session_info(cntdown,seekpos);
-    
-        
-        % TEST TRIAL SCALE
-        TDT.stim_left=zeros(1,PDR.buf_pts);
-        TDT.stim_right=zeros(1,PDR.buf_pts);
-        session.stim_left=zeros(1,session.stim_pts);
-        session.stim_right=zeros(1,session.stim_pts);
-        if(cnt==PDR.isi_buf)
-            loc=PDR.TEST_loc_sequence(Signalcnt);
-            if(loc~=0)
-                signalScale=PDR.TEST_scale_sequence(Signalcnt);
-                TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTLEFT(loc,:);
-                TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt)=TESTRIGHT(loc,:);
-            else % not playing test sound in this trial!
-                signalScale=0;
-            end
-            % scale test
-            TDT.stim_left=round(signalScale.*TDT.stim_left);
-            TDT.stim_right=round(signalScale.*TDT.stim_right);
-            % plot a marker on trial sequence plot
-            session.trialcnt=Signalcnt;
-            session.trialval=loc;
-            %sessionPlots3('Update Trial Plot');
-            % plot sound buffers:
-            session.stim_left=TDT.stim_left(PDR.TEST_start_pt:PDR.TEST_stop_pt);
-            session.stim_right=TDT.stim_right(PDR.TEST_start_pt:PDR.TEST_stop_pt);
-            %sessionPlots3('Update Stim Plot');
-        end
-
-        % SETUP ADAPTOR
-
-        if(cnt~=PDR.isi_buf && PDR.flag_adapt>0)
-            [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
-        elseif(cnt==PDR.isi_buf && PDR.flag_adapt>0)
-            % initialize circular buffers & set new seed value
-            rand_idx=round((length(PDR.ADAPT_state_list)-1)*rand+1);
-            adapt_state = PDR.ADAPT_state_list(rand_idx);
-            PDR.ADAPT_state_seq(end+1)=rand_idx; % save state sequence
-            CIRC_BUFS.adaptor=zeros(1,(length(PDR.ADAPT_coefs)+PDR.buf_pts));
-            CIRC_BUFS.left=CIRC_BUFS.adaptor; CIRC_BUFS.right=CIRC_BUFS.adaptor;
-            % paste prior/new buffers together (the trial ramp will remove any
-            % possible discontinuities in the adaptor)
-            [adapt_state, aleft_new, aright_new, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS);
-            adapt_left=[adapt_left(1:floor(end/2)) ...
-                aleft_new(ceil(end/2):end)];
-            adapt_right=[adapt_left(1:floor(end/2)) ...
-                aright_new(ceil(end/2):end)];
-        end
-        
-        if(~DEBUG)
-            % LEFT CHANNEL BUFFER
-            update_buffer(LEFT_PLAY(2),adapt_left,TDT.stim_left,cnt,Signalcnt,signalScale);
-            % RIGHT CHANNEL BUFFER
-            update_buffer(RIGHT_PLAY(2),adapt_right,TDT.stim_right,cnt,Signalcnt,signalScale);
-        end
-
-        % UPDATE ISI COUNTER AND SIGNAL COUNT
-        if(cnt==PDR.isi_buf)
-            cnt=round(2*TDT.max_signal_jitter*rand-TDT.max_signal_jitter); % +/- max
-            Signalcnt=Signalcnt+1;
-        else
-            cnt=cnt+1;
-        end
-        % RECORD PDR TRACE
-        if(record && ~DEBUG)
-            % First Record Channel:
-            ch=1; buf=2;
-            session.last_buffer=record_buffer(ch, REC_A(buf),DEC_A(buf),TDT,SignalPlayFlag,TDT.display_flag);
-            if(SignalPlayFlag==1)
-                if(PDR.TEST_loc_sequence(Signalcnt)==TDT.hab_id)
-                    session.test_flag=1;
-                else
-                    session.test_flag=Inf;
-                end
-            else
-                session.test_flag=0;
-            end
-            %sessionPlots3('Update Trace Plot');
-            % Second Record Channel:
-            ch=2; buf=2;
-            record_buffer(ch, REC_B(buf),DEC_B(buf),TDT,SignalPlayFlag,0);
-        end
-        
-        
-        % CHECK IF CORRECT BUFFERS ARE PLAYING
-        if(~DEBUG)
-            if(~check_play(TDT.nPlayChannels,[LEFT_PLAY(1) RIGHT_PLAY(1)]))
-                str=[];
-                for(k=1:TDT.nPlayChannels)
-                    p=S232('playseg',k);
-                    str=[str 'Ch ' num2str(k) ' playing buffer ' num2str(p) ' '];
-                end
-                disp(str);
-                disp(sprintf('Got %.2f percent of the way',seekpos/TDT.npts_total_play));
-                disp('APcard too slow? Or outFNs incorrect?');
-                break;
-            end
-        end
-        
-        % CHECK FOR HALT
-        if(session.HALT==1 && session.confirm_halt==0)
-            confirmdlg;
-        end
-        if(session.HALT==1 && session.confirm_halt==1)
-            seekpos=Inf;
-        end
-
-        % PROCESSING TIME
-        if(TDT.disp_proc_time)
-            t=toc;
-            session.proc_time(end+1)=t;
-            sessionPlots3('Update Session Info');
-        end
-    end
-    
     if(Signalcnt>TDT.ntrials); break; end;
     
 end
 
 %% WAIT FOR LAST BUFFERS TO FINISH
 if(~DEBUG)
-    while(S232('playseg',TDT.din)==LEFT_PLAY(2) || S232('playseg',TDT.din)==RIGHT_PLAY(2)); end;
+    while(S232('playseg',TDT.din)==TEST_PLAY(last) || S232('playseg',TDT.din)==ADAPT_PLAY(last)); end;
     TDT_flush(TDT);
 end
 
@@ -435,7 +283,7 @@ min=floor(rem_time/60); sec=rem_time-(60*min);
 session.rem_time=[min sec];
 min=floor(cntdown/60); sec=cntdown-(60*min);
 session.next_test_trial=[min sec];
-sessionPlots3('Update Session Info');
+sessionPlots_v4('Update Session Info');
 
 function confirmdlg
 global session
@@ -474,41 +322,43 @@ if(PDR.TEST_scale_sequence(Signalcnt)==0)
     end
 end
 
-function [adapt_state, adapt_left, adapt_right, CIRC_BUFS]=adaptor_filter(adapt_state,CIRC_BUFS)
-global PDR HRTF
-% get new set of pseudorandomly generated numbers and run through a FIR filter
-rand('state',adapt_state);
-new_buffer=rand(1,PDR.buf_pts);
-adapt_state=rand('state');
-
-[filtered_buffer, CIRC_BUFS.adaptor] = circ_fir(CIRC_BUFS.adaptor,new_buffer,PDR.ADAPT_coefs);
-% filter adaptor with left/right HRTF coefficients
-[adapt_left, CIRC_BUFS.left] = circ_fir(CIRC_BUFS.left,filtered_buffer,HRTF.AdaptL);
-[adapt_right, CIRC_BUFS.right] = circ_fir(CIRC_BUFS.right,filtered_buffer,HRTF.AdaptR);
-
-function update_buffer(BUF_ID,adaptor,test,cnt,Signalcnt,signalScale)
+function update_buffers(test_play,adapt_play,cnt,Signalcnt,signalScale,SPOS)
 global PDR TDT
-tic
+
+% prep adaptor buffer
 S232('dropall');
-if(PDR.flag_adapt)
-    S232('pushf',adaptor,PDR.buf_pts); S232('scale',PDR.ADAPT_scale);
+if(PDR.flag_adapt>0)
+    s232('qpushpartf',TDT.adapt_buf,SPOS,PDR.buf_pts); % pop correct adaptor segment to stack
     if(cnt==PDR.isi_buf)
-        S232('qpushf',TDT.ramp_buffer); S232('mult');
-        %S232('pushf',PDR.ADAPT_ramp,PDR.buf_pts); S232('mult');
+        S232('qpushf',TDT.ramp_buffer); S232('mult'); % multiply adaptor with ramp if isi reached
     end
+    if(TDT.buf_cnt==1)
+        s232('qpushf',TDT.gate_on); % ramp ON first buffer in expt
+        s232('mult');
+    end
+    if(TDT.buf_cnt==TDT.total_buffers)
+        n=s232('topsize');
+        s232('block',(n-TDT.gate_pts),(n-1));
+        s232('qpushf',TDT.gate_off); % ramp OFF last buffer in expt
+        s232('mult');
+        s232('noblock');
+    end
+    S232('scale',PDR.ADAPT_scale); % scale adaptor
 else
     S232('dpush',PDR.buf_pts); S232('value',0);
 end
-if(cnt==PDR.isi_buf)
-    loc=PDR.TEST_loc_sequence(Signalcnt);
-    if(loc~=0)
-        % push test onto stack and add to the ramped adaptor buffer:
-        S232('push16',test,PDR.buf_pts); % already scaled
-        S232('add'); % add to adaptor buffer
-    end
+S232('qpop16',adapt_play);
+
+% prep play buffer
+S232('dropall');
+if(cnt==PDR.isi_buf && signalScale~=0)
+    % push test onto stack, SCALE and add to the ramped adaptor buffer:
+    S232('qpushf',TDT.test_buf);
+    S232('scale',round(signalScale));
+else
+    s232('dpush',PDR.buf_pts); S232('value',0);
 end
-S232('qpop16',BUF_ID);
-toc
+S232('qpop16',test_play);
 
 function out=check_play(nPlayChannels,BUFFERS)
 out=true;
@@ -517,6 +367,75 @@ for ch=1:nPlayChannels
         out=false; % error
     end
 end
+
+function PD1_Route1(TDT)
+% commands to set up routing in the TDT
+SRATE = 1e6 / TDT.Fs;
+S232('PD1clear',TDT.din);
+S232('PD1fixbug',TDT.din);
+S232('PD1nstrms',TDT.din,2,2);
+S232('PD1srate',TDT.din,SRATE);
+S232('PD1npts',TDT.din,TDT.npts_total_play);
+
+S232('PD1clrsched',TDT.din);
+
+% right earphone routing
+src=[s232('DSPout',0) s232('DSPout',2)]; sf=[1 1];
+s232('PD1addmult',TDT.din,src,sf,2,s232('DAC',0));
+
+% left earphone routing
+src=[s232('DSPout',1) s232('DSPout',3)]; sf=[1 1];
+s232('PD1addmult',TDT.din,src,sf,2,s232('DAC',1));
+
+% IREGS
+S232('PD1addsimp',TDT.din,s232('IREG',0),s232('DSPin',0));
+S232('PD1addsimp',TDT.din,s232('IREG',0),s232('DSPin',1));
+S232('PD1addsimp',TDT.din,s232('IREG',1),s232('DSPin',2));
+S232('PD1addsimp',TDT.din,s232('IREG',1),s232('DSPin',3));
+
+% test sound routing
+s232('PD1specIB',TDT.din,s232('IB',0),s232('IREG',0));
+
+% adaptor routing
+s232('PD1specIB',TDT.din,s232('IB',1),s232('IREG',1));
+
+% pupillometer recording
+s232('PD1specOB',TDT.din,s232('OB',0),s232('ADC',0));
+s232('PD1specOB',TDT.din,s232('OB',1),s232('ADC',1));
+
+% LED thresholds
+S232('PD1setIO',TDT.din,0.01,9.99,0.01,9.99);
+
+function load_HRTF_coefs(HRTF)
+global PDR TDT
+% opmode parameters
+MONO=1;
+STEREO=2;
+MONSTER=3;
+% stype params
+DAMA_F=5;
+STACK=6;
+% DSP IDs:
+DSP_Test=0;
+DSP_Adapt=1;
+
+% clear stack
+s232('dropall');
+
+% idle ALL dsps
+S232('PD1idleDSP',TDT.din,hex2dec('0FFFFFFF'));
+
+% load test coefs to DSP
+s232('pushf',HRTF.TestL,PDR.HRTF_nlines);
+s232('PreLoadRaw',TDT.din,s232('DSPid',0),MONO,STACK,[],[],1,1,1);
+s232('pushf',HRTF.TestR,PDR.HRTF_nlines);
+s232('PreLoadRaw',TDT.din,s232('DSPid',1),MONO,STACK,[],[],1,1,1);
+% load adapt coefs to DSP
+s232('pushf',HRTF.AdaptL,PDR.HRTF_nlines);
+s232('PreLoadRaw',TDT.din,s232('DSPid',2),MONO,STACK,[],[],1,1,1);
+s232('pushf',HRTF.AdaptR,PDR.HRTF_nlines);
+s232('PreLoadRaw',TDT.din,s232('DSPid',3),MONO,STACK,[],[],1,1,1);
+s232('dropall');
 
 function out=check_params
 global TDT PDR HRTF
@@ -549,13 +468,13 @@ if(size(HRTF.AdaptR,1)~=1 && size(HRTF.AdaptR,2)~=PDR.HRTF_nlines)
     out=-1;
 end
 
-if(size(HRTF.TestL,2)~=PDR.TEST_nlocs && size(HRTF.TestL,1)~=PDR.HRTF_nlines)
-    h = warndlg('Test HRTF arrays must be HRTF_nlines x # Test Locs');
+if(size(HRTF.TestL,1)~=1 && size(HRTF.TestL,2)~=PDR.HRTF_nlines)
+    h = warndlg('Test HRTF arrays must be 1 x HRTF_nlines');
     uiwait(h);
     out=-1;
 end
-if(size(HRTF.TestR,2)~=PDR.TEST_nlocs && size(HRTF.TestR,1)~=PDR.HRTF_nlines)
-    h = warndlg('Test HRTF arrays must be HRTF_nlines x # Test Locs');
+if(size(HRTF.TestR,1)~=1 && size(HRTF.TestR,2)~=PDR.HRTF_nlines)
+    h = warndlg('Test HRTF arrays must be 1 x HRTF_nlines');
     uiwait(h);
     out=-1;
 end
@@ -580,12 +499,3 @@ if(size(PDR.TEST_scale_sequence,1)~=1 && size(PDR.TEST_scale_sequence,2)<PDR.n_t
     uiwait(h);
     out=-1;
 end
-
-% check location sequence
-if(size(PDR.TEST_loc_sequence,1)~=1 && size(PDR.TEST_loc_sequence,2)<PDR.n_trials)
-    h = warndlg('Location sequence must be a 1 x n (n>=ntrials), row vector');
-    uiwait(h);
-    out=-1;
-end
-
-
