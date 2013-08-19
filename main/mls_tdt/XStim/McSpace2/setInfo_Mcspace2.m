@@ -1,0 +1,411 @@
+% SetInfo_McSpace2
+
+% uses .eq HRIRs, therefore make sure earphone filters are also selected
+XStimParams.ephone_flag = 0;
+set(H.ephoneuseit,'Value',0);
+XStimParams.space_flag = 1;
+XStimParams.ildalone_flag = 0;
+XStimParams.itdalone_flag = 0;
+XStimParams.ABLalone_flag = 0;
+
+if get(H.McSpace2_DynamicRangepb,'value')
+    XStimParams.HiDynamicRange = 1;
+    set(H.McSpace2_DynamicRangepb,'string','push for Normal Dynamic Range');
+    set(H.McSpace2_DynamicRangepb,'BackgroundColor','red');
+    set(H.McSpace2_DynamicRangeTxt,'visible','on');
+else
+    XStimParams.HiDynamicRange = 0;
+    set(H.McSpace2_DynamicRangepb,'string','push for High Dynamic Range');
+    set(H.McSpace2_DynamicRangepb,'BackgroundColor','yellow');
+    set(H.McSpace2_DynamicRangeTxt,'visible','off');
+end
+
+% check for fully-cued pushbutton (file-picker)
+if get(H.McSpace2_filepb,'Value')
+    [FN.space_std,FN.space_path] = uigetfile([FN.HRTF_path '*.*'],'Select Fully-cued HRTF File');
+    if(FN.space_path ~= 0)
+        set(H.McSpace2_file,'String',FN.space_std);
+    end
+    set(H.McSpace2_filepb,'Value',0);
+    FN.HRTFfiletype(1,2) = testHRTFfiletype(FN.space_path, FN.space_std);
+end
+
+XStimParams.curr_ABL = str2num(get(H.McSpace2_ABL,'string'));
+
+% bandwidth & limits
+if get(H.stim_type,'Value') ~= 9			% not from file
+    XStimParams.bandwidth = str2num(get(H.McSpace2_bandwidth,'String'));
+    XStimParams.bandlimits(1) = str2num(get(H.McSpace2_bandlimits(1),'String'));
+    XStimParams.bandlimits(2) = str2num(get(H.McSpace2_bandlimits(2),'String'));
+end
+
+% set numreps
+XStimParams.numreps = str2num(get(H.McSpace2_numreps,'String'));
+
+% set ramppts
+temp = str2num(get(H.McSpace2_ramppts,'string'));
+if mod(temp,2)    temp = temp+1;  end 
+set(H.McSpace2_ramppts,'string',num2str(temp));
+XStimParams.ramppts = temp;
+clear temp
+
+%Set space PickerFlag
+XStimParams.picker_flag = 1;
+if exist1('H.pickerfig') 	
+    if isempty(H.pickerfig)
+        XStimParams.locations = [];
+        H.pickerfig = spacePicker;
+    end
+else
+    XStimParams.locations = [];
+    H.pickerfig = spacePicker;  
+end
+
+% increment test number
+if(exist1('H.McSpace2fig') & get(H.McSpace2_inc_testnum,'Value'))
+    XStimParams.testnum = XStimParams.testnum +1;
+    set(H.testnum, 'String', num2str(XStimParams.testnum))
+    update_dataFN;
+    set(H.McSpace2_inc_testnum,'Value',0);
+end
+set(H.McSpace2_data_FN,'String', FN.data);
+
+% update display of stim filename
+stim_type = get(H.McSpace2_stim_type,'String');
+stim_val = get(H.McSpace2_stim_type,'Value');
+set(H.stim_type,'Value',stim_val);
+XStimParams.stim_type = deblank(stim_type(stim_val,:));
+
+clear stim_type
+
+set(H.stim_filename,'Enable','off');
+set(H.McSpace2_stimFN,'Enable','off');
+set(H.McSpace2_freqtxt,'visible','off');
+set(H.McSpace2_freq,'visible','off');
+
+switch stim_val
+    case {1 2}
+        set(H.McSpace2_freqtxt,'visible','on');
+        set(H.McSpace2_freq,'visible','on');
+        XStimParams.curr_freq = str2num(get(H.McSpace2_freq,'string'));
+        str = ['With tone or gammatone stimuli    '; ...
+                'b/wn epoch clipping occurs unless '; ...
+                'ramppts is non-zero. Larger swings'; ...
+                'in seqSPL require higher ramppts. '];
+        set(H.McSpace2_rampptstxt(2),'string',str);
+        set(H.McSpace2_rampptstxt(2),'ForeGroundColor',[0 .5 .5])
+    case 9								% from file
+        set(H.stim_filename,'String',FN.stim);
+        set(H.McSpace2_stimFN,'String',FN.stim);
+        set(H.McSpace2_stimFN,'Enable','on');
+        set(H.McSpace2_stimFNpb,'Enable','on');
+        set(H.McSpace2_repeatmode,'value',1);
+    otherwise
+        str = ['ramppts is traditionally set'; ...
+                'to zero for this stimtype.  '];
+        set(H.McSpace2_rampptstxt(2),'string',str);
+        set(H.McSpace2_rampptstxt(2),'ForeGroundColor','blue')
+end
+
+if get(H.McSpace2_stimFNpb,'value')
+    [stim_from_file, FN.stim, FN.stim_path] = Get_Stimulus_File(XStimParams, FN.stim_path);
+    set(H.McSpace2_stimFN,'Enable','on');
+    D = dir([FN.stim_path FN.stim]);
+    temp = (D.bytes/4) - (XStimParams.silence_lead + XStimParams.silence_trail)*(TDT.Fs/1000) - 254;
+    XStimParams.curr_stimdur = round(1000 * temp / TDT.Fs);
+    set(H.McSpace2_stimFN,'String',FN.stim);
+end
+
+XStimParams.repeatmode = get(H.McSpace2_repeatmode,'value');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tempstr = ['SPLtest  ';'AMdepth  '; 'AMdepthdB'; 'AMperiod '; 'AMperiodB'];
+% is this a new type of test?"
+newtype = 0;
+for iType = 1:5
+    if get(H.McSpace2_McTestType(iType),'value')
+        if ~strcmp(XStimParams.McTestType,tempstr(iType,:))
+            newtype=iType;
+        end
+    end
+end
+if newtype
+    for iType = setdiff(1:5,newtype)
+        set(H.McSpace2_McTestType(iType),'value',0);
+    end
+end
+
+% get McTestType
+McTestType = 'dunno ';
+for iType = 1:5
+    if get(H.McSpace2_McTestType(iType),'value')
+        McTestType = tempstr(iType,:);
+    end
+end
+
+clear M
+switch McTestType
+    case 'SPLtest  '
+        if ~strcmp(XStimParams.McTestType,McTestType)
+            set(H.McSpace2_mod_txt(4),'visible','on');          % mod phase text
+            set(H.McSpace2_mod_phase,'visible','on');           % mod phase
+            set(H.McSpace2_mod_txt(1),'visible','on');          % mod freq text
+            set(H.McSpace2_mod_freq ,'visible','on');           % mod freq
+            set(H.McSpace2_mod_txt(2),'visible','on');          % mod depth text
+            set(H.McSpace2_mod_depth ,'visible','on');          % mod depth
+            set(H.McSpace2_epoch_durationtxt,'visible','on');   % epoch_dur text
+            set(H.McSpace2_epoch_duration,'visible','on');      % epoch_dur
+            set(H.McSpace2_SPLinc_txt(1:2),'visible','on');      % SPLinc for regime1
+            set(H.McSpace2_SPLinc(1:2),'visible','on');      % SPLinc for regime2
+            set(H.McSpace2_SPLtxt(4),'visible','on');
+            set(H.McSpace2_rndSPLs,'visible','on');
+            
+            set(H.McSpace2_SPLtxt(3),'visible','off');
+            set(H.McSpace2_SPLtxt2(3),'visible','off');
+            set(H.McSpace2_SPLtxt(1),'string','SetUp SPLs for regime one');
+            set(H.McSpace2_SPLtxt(2),'string','focal-range SPL');
+            set(H.McSpace2_SPLtxt2(1),'string','SetUp SPLs for regime two');
+            set(H.McSpace2_SPLtxt2(2),'string','focal-range SPL');
+            % reset slider values
+            M = [0 30];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider(islider),'Min',M(1),'Max',M(2),'SliderStep',[1/31 5/31]);
+                set(H.McSpace2_SPLslider(islider),'value',M(islider));
+                set(H.McSpace2_SPLslider_txt(islider),'string',num2str(M(islider)));
+
+                set(H.McSpace2_SPLslider2(islider),'Min',M(1),'Max',M(2),'SliderStep',[1/31 5/31]);
+                set(H.McSpace2_SPLslider2(islider),'value',M(islider));
+                set(H.McSpace2_SPLslider_txt2(islider),'string',num2str(M(islider)));
+            end
+        else
+            % get slider values
+            for islider = 1:2
+                M(islider) = round(get(H.McSpace2_SPLslider(islider),'value'));
+            end
+            XStimParams.focalSPL = [min1(M) max1(M)];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider(islider),'value',XStimParams.focalSPL(islider));
+                set(H.McSpace2_SPLslider_txt(islider),'string',num2str(XStimParams.focalSPL(islider)));
+            end
+
+            for islider = 1:2
+                M(islider) = round(get(H.McSpace2_SPLslider2(islider),'value'));
+            end
+            XStimParams.focalSPL2 = [min1(M) max1(M)];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider2(islider),'value',XStimParams.focalSPL2(islider));
+                set(H.McSpace2_SPLslider_txt2(islider),'string',num2str(XStimParams.focalSPL2(islider)));
+            end
+            XStimParams.rndSPLs = get(H.McSpace2_rndSPLs,'value');
+        end
+    case {'AMdepth  ', 'AMdepthdB'}
+        if ~strcmp(XStimParams.McTestType,McTestType)
+            set(H.McSpace2_mod_txt(4),'visible','off');          % mod phase text
+            set(H.McSpace2_mod_phase,'visible','off');           % mod phase
+            XStimParams.mod_phase(1) = pi/2;                    % mod phase
+            set(H.McSpace2_mod_txt(1),'visible','on');           % mod freq text
+            set(H.McSpace2_mod_freq ,'visible','on');            % mod freq
+            set(H.McSpace2_mod_txt(2),'visible','off');          % mod depth text
+            set(H.McSpace2_mod_depth ,'visible','off');          % mod depth
+            set(H.McSpace2_epoch_durationtxt,'visible','off');   % epoch_dur text
+            set(H.McSpace2_epoch_duration,'visible','off');      % epoch_dur
+            set(H.McSpace2_SPLinc_txt(1:2),'visible','off');      % SPLinc for regime1
+            set(H.McSpace2_SPLinc(1:2),'visible','off');            % SPLinc for regime2
+            set(H.McSpace2_SPLtxt(4),'visible','off');
+            set(H.McSpace2_rndSPLs,'visible','off');
+
+            set(H.McSpace2_SPLtxt(3),'visible','off');
+            set(H.McSpace2_SPLtxt(1),'string','SetUp AM depths');
+            set(H.McSpace2_SPLtxt(2),'string','focal-range AMdepth');
+            set(H.McSpace2_SPLtxt2(3),'visible','off');
+            set(H.McSpace2_SPLtxt2(1),'string','SetUp AM depths');
+            set(H.McSpace2_SPLtxt2(2),'string','focal-range AMdepth');
+            
+            M = [.1 1];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider(islider),'Min',M(1),'Max',M(2),'SliderStep',[1/9 1/9]);
+                set(H.McSpace2_SPLslider(islider),'value',M(islider));
+                set(H.McSpace2_SPLslider_txt(islider),'string',num2str(M(islider)));
+               set(H.McSpace2_SPLslider2(islider),'Min',M(1),'Max',M(2),'SliderStep',[1/9 1/9]);
+                set(H.McSpace2_SPLslider2(islider),'value',M(islider));
+                set(H.McSpace2_SPLslider_txt2(islider),'string',num2str(M(islider)));
+            end
+        else
+            % reset slider values to handle AMdepths - retain values in
+            % XStimParams as if SPLs
+            for islider = 1:2
+                M(islider) = get(H.McSpace2_SPLslider(islider),'value');
+            end
+            XStimParams.focalSPL = [min1(M) max1(M)];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider(islider),'value',XStimParams.focalSPL(islider));
+                set(H.McSpace2_SPLslider_txt(islider),'string',num2str(XStimParams.focalSPL(islider)));
+            end
+            
+           for islider = 1:2
+                M(islider) = get(H.McSpace2_SPLslider2(islider),'value');
+            end
+            XStimParams.focalSPL2 = [min1(M) max1(M)];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider2(islider),'value',XStimParams.focalSPL2(islider));
+                set(H.McSpace2_SPLslider_txt2(islider),'string',num2str(XStimParams.focalSPL2(islider)));
+            end
+end
+    case {'AMperiod ', 'AMperiodB'}
+        if ~strcmp(XStimParams.McTestType,McTestType)
+            set(H.McSpace2_mod_txt(4),'visible','off');          % mod phase text
+            set(H.McSpace2_mod_phase,'visible','off');           % mod phase
+            XStimParams.mod_phase(1) = pi/2;                    % mod phase
+            set(H.McSpace2_mod_txt(1),'visible','off');          % mod freq text
+            set(H.McSpace2_mod_freq ,'visible','off');           % mod freq
+            set(H.McSpace2_mod_txt(2),'visible','on');           % mod depth text
+            set(H.McSpace2_mod_depth ,'visible','on');           % mod depth
+            set(H.McSpace2_epoch_durationtxt,'visible','off');   % epoch_dur text
+            set(H.McSpace2_epoch_duration,'visible','off');      % epoch_dur
+            set(H.McSpace2_SPLinc_txt(1:2),'visible','off');      % SPLinc for regime1
+            set(H.McSpace2_SPLinc(1:2),'visible','off');            % SPLinc for regime2
+             set(H.McSpace2_SPLtxt(4),'visible','off');
+            set(H.McSpace2_rndSPLs,'visible','off');
+           
+            set(H.McSpace2_SPLtxt(1),'string','SetUp AM periods');
+            set(H.McSpace2_SPLtxt(2),'string','focal-range AMperiod');
+            set(H.McSpace2_SPLtxt(3),'visible','on');
+            set(H.McSpace2_SPLtxt2(1),'string','SetUp AM periods');
+            set(H.McSpace2_SPLtxt2(2),'string','focal-range AMperiod');
+            set(H.McSpace2_SPLtxt2(3),'visible','on');
+            
+            Mperiods = [150 158 167 176 187 200 214 231 250 273 300 333 375 429 500 600 750 1000 1500];
+            Mfreqs = round((1000./[Mperiods(1) Mperiods(end)]./(1/30)));
+            M = [1 length(Mperiods)];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider(islider),'Min',M(1),'Max',M(2),'SliderStep',[1 1]/M(2));
+                set(H.McSpace2_SPLslider(islider),'value',M(islider));
+                set(H.McSpace2_SPLslider_txt(islider),'string',num2str(Mfreqs(islider)));
+                set(H.McSpace2_SPLslider2(islider),'Min',M(1),'Max',M(2),'SliderStep',[1 1]/M(2));
+                set(H.McSpace2_SPLslider2(islider),'value',M(islider));
+                set(H.McSpace2_SPLslider_txt2(islider),'string',num2str(Mfreqs(islider)));
+            end
+        else
+            % reset slider values to handle AMperiods - retain values in
+            % XStimParams as if indices to Mperiods
+            Mperiods = [150 158 167 176 187 200 214 231 250 273 300 333 375 429 500 600 750 1000 1500];
+            Mfreqs = round((1000./Mperiods./(1/30)));       % where dt = 1/30;
+            for islider = 1:2
+                M(islider) = round(get(H.McSpace2_SPLslider(islider),'value'));
+            end
+            XStimParams.focalSPL = [min1(M) max1(M)];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider(islider),'value',XStimParams.focalSPL(islider));
+                set(H.McSpace2_SPLslider_txt(islider),'string',num2str(Mfreqs(XStimParams.focalSPL(islider))));
+            end
+            
+            for islider = 1:2
+                M(islider) = round(get(H.McSpace2_SPLslider2(islider),'value'));
+            end
+            XStimParams.focalSPL2 = [min1(M) max1(M)];
+            for islider = 1:2
+                set(H.McSpace2_SPLslider2(islider),'value',XStimParams.focalSPL2(islider));
+                set(H.McSpace2_SPLslider_txt2(islider),'string',num2str(Mfreqs(XStimParams.focalSPL2(islider))));
+            end
+end
+end
+
+XStimParams.McTestType = McTestType;
+%%% values for FOCAL SPLs
+XStimParams.epoch_duration(1) = str2num(get(H.McSpace2_epoch_duration,'string'));
+XStimParams.regime_duration(1) = str2num(get(H.McSpace2_regime_duration,'string'));
+XStimParams.regime_duration(2) = str2num(get(H.McSpace2_regime_duration2,'string'));
+XStimParams.focalProb = min([1 str2num(get(H.McSpace2_focalProb,'string'))]);
+XStimParams.focalProb2 = min([1 str2num(get(H.McSpace2_focalProb2,'string'))]);
+XStimParams.SPLinc(1) = str2num(get(H.McSpace2_SPLinc(1),'string'));
+XStimParams.SPLinc(2) = str2num(get(H.McSpace2_SPLinc(2),'string'));
+
+% update stimulus duration
+if stim_val ~= 9
+    XStimParams.curr_stimdur = str2num(get(H.McSpace2_DUR, 'String'));
+    XStimParams.regime_duration(1) = floor(XStimParams.regime_duration(1) / XStimParams.epoch_duration(1)) * XStimParams.epoch_duration(1);
+    XStimParams.regime_duration(2) = floor(XStimParams.regime_duration(2) / XStimParams.epoch_duration(1)) * XStimParams.epoch_duration(1);
+    XStimParams.curr_stimdur = floor(XStimParams.curr_stimdur / sum(XStimParams.regime_duration)) * sum(XStimParams.regime_duration);
+end
+
+set(H.McSpace2_regime_duration,'string',num2str(XStimParams.regime_duration(1)));
+set(H.McSpace2_regime_duration2,'string',num2str(XStimParams.regime_duration(2)));
+set(H.McSpace2_DUR, 'String',num2str(XStimParams.curr_stimdur));
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% check out modulation parameters for stim
+XStimParams.mod_depth(1) = str2num(get(H.McSpace2_mod_depth,'String'));
+XStimParams.mod_freq(1) = str2num(get(H.McSpace2_mod_freq,'String'));
+
+if strcmp(McTestType,'AMdepth  ') | strcmp(McTestType, 'AMdepthdB')
+    temp = round(TDT.Fs/XStimParams.mod_freq(1));
+    XStimParams.mod_freq(1) = TDT.Fs/temp;
+    set(H.McSpace2_mod_freq,'String',num2str(XStimParams.mod_freq(1)))
+end
+
+if strcmp(McTestType,'SPLtest  ')
+    XStimParams.mod_phase(1) = str2num(get(H.McSpace2_mod_phase,'String'));
+   
+    mod_type = get(H.McSpace2_mod_type,'String');
+    mod_num = get(H.McSpace2_mod_type,'Value');
+    XStimParams.mod_type = deblank(mod_type(mod_num,:));
+    
+    set(H.McSpace2_mod_txt(3), 'Visible','off');
+    set(H.McSpace2_analVstr,'visible','off');
+    
+    if strcmp( XStimParams.mod_type,'Sq wave')
+        set(H.McSpace2_mod_txt(1),'String', 'Freq:');
+        set(H.McSpace2_mod_freq,'Visible','on');
+        set(H.McSpace2_mod_phase,'Visible','on');
+        set(H.McSpace2_mod_txt(2),'Visible','on');
+        set(H.McSpace2_mod_depth,'Visible','on');
+        set(H.McSpace2_mod_txt(3),'Visible','on');
+        set(H.McSpace2_mod_pb,'Visible','off');
+        if stim_val ~= 10   set(H.McSpace2_mod_txt(3), 'Visible','on');   end
+        set(H.McSpace2_analVstr,'visible','on');
+    elseif strcmp( XStimParams.mod_type, 'Tone')
+        set(H.McSpace2_mod_txt(1),'String', 'Freq:');
+        set(H.McSpace2_mod_freq,'Visible','on');
+        set(H.McSpace2_mod_phase,'Visible','on');
+        set(H.McSpace2_mod_txt(2),'Visible','on');
+        set(H.McSpace2_mod_depth,'Visible','on');
+        set(H.McSpace2_mod_txt(3),'Visible','on');
+        set(H.McSpace2_mod_pb,'Visible','off');
+        if stim_val ~= 10   set(H.McSpace2_mod_txt(3), 'Visible','on');   end
+        set(H.McSpace2_analVstr,'visible','on');
+    elseif strcmp( XStimParams.mod_type, 'File')
+        set(H.McSpace2_mod_txt(1),'String', FN.mod);
+        set(H.McSpace2_mod_pb,'Visible','on');
+        set(H.McSpace2_mod_freq,'Visible','off');
+        set(H.McSpace2_mod_txt(2),'Visible','on');
+        set(H.McSpace2_mod_depth,'Visible','on');
+        set(H.McSpace2_mod_phase,'Visible','off');
+        set(H.McSpace2_mod_txt(3),'Visible','off');
+        if stim_val ~= 10   set(H.McSpace2_mod_txt(3), 'Visible','on');   end
+        if get(H.McSpace2_mod_pb,'Value')
+            [mod_from_file, FN.mod, FN.mod_path] = Get_Stimulus_File(XStimParams, FN.mod_path);
+            set(H.McSpace2_mod_pb,'Value',0);
+        end
+    elseif strcmp( XStimParams.mod_type, 'LP Noise')
+        set(H.McSpace2_mod_txt(1),'String', 'CutOff Freq:');
+        set(H.McSpace2_mod_freq,'Visible','on');
+        set(H.McSpace2_mod_txt(2),'Visible','on');
+        set(H.McSpace2_mod_depth,'Visible','on');
+        set(H.McSpace2_mod_phase,'Visible','off');
+        set(H.McSpace2_mod_pb,'Visible','off');
+        set(H.McSpace2_mod_txt(3),'Visible','off');
+        if stim_val ~= 10   set(H.McSpace2_mod_txt(3), 'Visible','on');   end
+    elseif strcmp( XStimParams.mod_type, 'None')
+        set(H.McSpace2_mod_txt(1),'String', 'no mod  ');
+        set(H.McSpace2_mod_freq,'Visible','off');
+        set(H.McSpace2_mod_phase,'Visible','off');
+        set(H.McSpace2_mod_pb,'Visible','off');
+        set(H.McSpace2_mod_txt(2),'Visible','off');
+        set(H.McSpace2_mod_txt(3),'Visible','off');
+        set(H.McSpace2_mod_depth,'Visible','off');
+    end
+end
+
+eval(['save ' FN.current_path 'XStimParams_current XStimParams;'])
+eval(['save ', FN.current_path  'FN_current FN;'])
+update_XStim
