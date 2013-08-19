@@ -7,7 +7,7 @@ p=path;
 start=1;
 flag_remove=0;
 cmp_str=computer;
-if(strcmp(cmp_str(1:3),'MAC'))
+if(strcmp(cmp_str(1:3),'MAC') || strcmp(cmp_str,'GLNXA64'))
     delimit=':';
 else
     delimit=';';

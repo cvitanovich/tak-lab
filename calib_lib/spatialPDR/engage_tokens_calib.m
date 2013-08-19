@@ -29,7 +29,7 @@ if(out==-1); return; end;
 % PREPARE PD1 FOR CONVERSION:
 PD1_init(TDT);
 
-% attens (ch1 and ch2)
+% attenuator settings
 TDT_attens(TDT);
 
 % INITIALIZE BUFFERS
@@ -39,7 +39,7 @@ PDR.TMP_LT=TDT.n_total_buffers+1;
 S232('allotf',PDR.TMP_LT,TDT.buf_pts);
 PDR.TMP_RT=TDT.n_total_buffers+2;
 S232('allotf',PDR.TMP_RT,TDT.buf_pts);
-
+TDT.n_total_buffers=TDT.n_total_buffers+2;
 
 tokens = {'GTONE','OCTAVE','BBN'};
 for cnt=1:length(tokens)

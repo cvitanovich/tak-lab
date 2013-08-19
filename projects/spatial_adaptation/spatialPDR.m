@@ -379,11 +379,11 @@ S232('PD1npts',TDT.din,TDT.npts_total_play);
 
 S232('PD1clrsched',TDT.din);
 
-% right earphone routing
+% left earphone routing
 src=[s232('DSPout',0) s232('DSPout',2)]; sf=[1 1];
 s232('PD1addmult',TDT.din,src,sf,2,s232('DAC',0));
 
-% left earphone routing
+% right earphone routing
 src=[s232('DSPout',1) s232('DSPout',3)]; sf=[1 1];
 s232('PD1addmult',TDT.din,src,sf,2,s232('DAC',1));
 

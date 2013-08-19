@@ -1,4 +1,4 @@
-function HRTF = MTLreadHDR(HRTF)
+function HRTF = MTLreadHDR(directory,fname)
 % Adapted from MTLRH
 % MTLreadHDR reads the header of a SIGMAP and MTLSIG file.
 %
@@ -22,7 +22,7 @@ function HRTF = MTLreadHDR(HRTF)
 
 %open file for reading
 %disp(HRTFfile);
-HRTFfile = [HRTF.directory HRTF.fname];
+HRTFfile = [directory fname];
 [fid,message] = fopen(HRTFfile,'r','ieee-le');
 if (fid==-1)         				% file can't be opened
     disp(message);

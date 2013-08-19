@@ -36,7 +36,7 @@ PDR = struct(...                        % MAIN PARAMETERS:
     'len_session',[], ...               % length of session (in minutes)
     'starttime',[], ...                 % session start time
     'stoptime', [], ...                 % session stop time
-    'code_path',code_path,...    % path to code
+    'code_path',code_path,...           % path to code
     'data_path',data_path,...
     'base_atten',0,...                  % attenuation value to send to TDT (combining scale_val and atten gives a certain SPL in dB -- This needs to be calibrated!!!)
     'filename',[],...                   % file name for storing session data
