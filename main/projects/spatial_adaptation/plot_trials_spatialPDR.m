@@ -8,18 +8,20 @@ if length(tmp)<1
     return;
 end
 cnt=0;
-scale_list=sort(PDR.TEST_scales);
+
+load([PDR.CALIB_directory PDR.CALIB_fname]);
+eval(['mTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(1,1);']);
+eval(['bTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(2,1);']);
 t_trials=find(PDR.TEST_scale_sequence~=0);
 scales=PDR.TEST_scale_sequence(t_trials);
-sz=ceil(log10(scales)).^3; % sizes for trial markers
+SPLs=mTest.*log10(scales)-PDR.base_atten+bTest;
+%sz=ceil(sqrt(scales)); %ceil(log10(scales)).^3; % sizes for trial markers
 loc=PDR.TEST_loc(2);
-scatter(t_trials,loc.*ones(1,length(t_trials)),sz,'filled')
-
+scatter(t_trials,SPLs);
 PDR.n_test_trials = cnt;
 xlabel('Trial #');
-ylabel('Location (az)');
-y_tick_label = ['(' num2str(PDR.TEST_loc(1)) ',' num2str(PDR.TEST_loc(2)) ')'];
-set(gca,'YTick',loc,'YTickLabel',y_tick_label);
-axis([0 PDR.ntrials+1 -100 100]);
+ylabel('SPLs');
+axis([0 PDR.ntrials+1 -30 90]);
 whitebg(gcf,'k');
-title('Test Trial Scale Sequence');
+ntests=length(find(PDR.TEST_scale_sequence~=0));
+title(['Trial Sequence ( ' num2str(ntests) ' test trials )']);

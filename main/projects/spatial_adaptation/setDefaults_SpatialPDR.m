@@ -19,13 +19,13 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'jitter',0,...
     'virtual',1, ...                        % flag for virtual sound presentation
     'record',1, ...                        % flag for recording pupillometer output
-    'flag_adapt',1,...                     % flag for adapting stimulus
-    'ntrials',10,...                       % # of trials in session
-    'npretrials',2,...                     % # of trials before first test trial
+    'flag_adapt',0,...                     % flag for adapting stimulus
+    'ntrials',770,...                       % # of trials in session
+    'npretrials',100,...                     % # of trials before first test trial
     'n_test_trials',[],...                  % # of test trials 
     'buf_pts',30000,...                     % number of pts in each buffer
     'buf_dur',[],...                        % buffer duration in ms
-    'isi_buf',3,...                         % no. buffers between trials
+    'isi_buf',6,...                         % no. buffers between trials
     'isi_time',[],...                       % ISI (seconds) between trials
     'decimationfactor',4, ...               % decimation factor for data collection
     'stim_Fs',30000, ...                   % sampling rate (Hz) for stimuli
@@ -35,7 +35,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'stoptime',[], ...                     % session stop time
     'code_path',code_path,...  % path to code
     'data_path',data_path, ...     % data path (normally: c:\andrew\pdr\data normally, calib: c:\andrew\pdr\calib_data)
-    'base_atten',40,...70,...                      % base attenuation for PA4
+    'base_atten',[],...                      % base attenuation for PA4 (calculated)
     'filename',[],...                       % filename for session data
     'bird_id',925,...
     'hab_id',0,...
@@ -48,7 +48,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ADAPT_soundtype','GTONE',...            % type of sound for adapting stimulus
     'ADAPT_cF',6000,...                     % center frequency (Hz) (if relevant)
     'ADAPT_coefs',[],...                    % FIR coefficients to generate adapting stimulus
-    'ADAPT_SPL',30,...                      % SPL for adaptor
+    'ADAPT_SPL',0,...                      % SPL for adaptor
     'ADAPT_scale',[],...                    % scale for adaptor (calculated using calibration data)
     'ADAPT_ramp',5,...                      % ramp for trial segments
     'ADAPT_dur',[],...                      % adaptor duration in seconds (calculated from isi_buf) in seconds
@@ -64,10 +64,13 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_dur',0.1,...                      % duration of test sounds (seconds)
     'TEST_ramp',5,...                       % ramp duration for test sound (should be 5ms)
     'TEST_on_delay_pts',[],...              % delay before test sound onset (TBD)
-    'TEST_trial_freq',3, ...                % test sound every x trials
-    'TEST_trial_jitter',0, ...              % maximum jitter in isi_buf
-    'TEST_SPLs',[20 30 40],...[-12 -6 -3 0 3 6 12],...          % target SPLs for test sounds
+    'TEST_trial_freq',15, ...                % test sound every x trials
+    'TEST_trial_jitter',5, ...              % maximum jitter in isi_buf
+    'TEST_SPLs',[-12 -6 -3 0 3 6],...          % target SPLs for test sounds
+    'TEST_outlier_SPLs',[12 18],...
+    'TEST_n_outliers',7,...
     'TEST_scales',[],...                    % scales (calculated using calibration data)
+    'TEST_outlier_scales',[],...
     'TEST_sound',[],...                     % test sound stored here
     'TEST_scale_sequence',[],...            % sequence of test sound scales
     'TEST_loc',[0 0],...                   % location for test stimuli (el,az)

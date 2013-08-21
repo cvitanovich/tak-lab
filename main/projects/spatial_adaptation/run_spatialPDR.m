@@ -63,15 +63,38 @@ setDefaults_spatialPDR; % sets default values for running a session
 
 % load calibration files and calculate scales
 load([PDR.CALIB_directory PDR.CALIB_fname]);
-if(PDR.flag_adapt>0)
-    eval(['mAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(1,1);']);
-    eval(['bAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(2,1);']);
-    PDR.ADAPT_scale=round(10^((PDR.ADAPT_SPL-bAdapt+PDR.base_atten)/mAdapt));
-end
+eval(['mAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(1,1);']);
+eval(['bAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(2,1);']);
 eval(['mTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(1,1);']);
 eval(['bTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(2,1);']);
-PDR.TEST_scales=round(10.^((PDR.TEST_SPLs-bTest+PDR.base_atten)./mTest));
-
+atten=50; check=0; cnt=0;
+ALL_TEST_SPLs=[ ];
+while(check==0)
+    if(PDR.flag_adapt>0)
+        PDR.ADAPT_scale=round(10^((PDR.ADAPT_SPL-bAdapt+atten)/mAdapt));
+    else
+        PDR.ADAPT_scale=[];
+    end
+    test_scales=round(10.^((PDR.TEST_SPLs-bTest+atten)./mTest));
+    test_outlier_scales=round(10.^((PDR.TEST_outlier_SPLs-bTest+atten)./mTest));
+    scales=[PDR.ADAPT_scale test_scales test_outlier_scales];
+    if(max(scales)>32760)
+        atten=atten-0.1; % increase atten
+    elseif(min(scales)<100)
+        atten=atten+0.1; % decrease atten
+    else
+        check=1;
+    end
+    cnt=cnt+1;
+    if((cnt>1E4) || atten<0 || atten>75)
+        hWarn=warndlg('Could not find a suitable attenuation for the levels desired!');
+        uiwait(hWarn);
+        return
+    end
+end
+PDR.TEST_scales=test_scales;
+PDR.TEST_outlier_scales=test_outlier_scales;
+PDR.base_atten=atten;
 % buffer duration (ms):
 PDR.buf_dur = 1000*PDR.buf_pts/PDR.stim_Fs;
 % isi time:
@@ -86,6 +109,7 @@ m=num2str(q(2));if size(m,2)<2;m=['0' m];end
 d=num2str(q(3));if size(d,2)<2;d=['0' d];end
 
 PDR.filename = [y m d '_' num2str(PDR.bird_id) 'a'];
+
 PDR.npts_totalplay = PDR.ntrials*(PDR.isi_buf+1)*PDR.buf_pts; % Calculate length of session!
 PDR.len_session(1) = floor((1/60)*(PDR.npts_totalplay/PDR.stim_Fs)); % length of session (minutes)
 PDR.len_session(2) = round(rem((PDR.npts_totalplay/PDR.stim_Fs),60)); % seconds
@@ -114,7 +138,7 @@ clear stim;
 quit = 0;
 [quit,PDR] = setupTrialSeq_spatialPDR(PDR); % just sets up trial IDs so far
 if(quit); return; end;
-
+PDR.n_test_trials=length(find(PDR.TEST_scale_sequence~=0));
 % RAMP SETUP:
 ramplen = 5; % length of ramp in ms
 tmp = find(PDR.TEST_sound ~= 0);
@@ -295,6 +319,7 @@ disp(['It should be done in ~' num2str(lengthOFtrials) ' min from now (' num2str
 
 %write header information to file... saving global variables
 PDR = orderfields(PDR); % order fields by ASCII dictionary order
+disp(['Session Name: ' PDR.filename])
 save([PDR.data_path PDR.filename '.mat'], 'PDR','HRTF');
 
 % ENGAGE the main spatialPDR script:

@@ -6,34 +6,27 @@ setup=1;
 while setup
     % Setup randomized scale and loc sequences:
     scales = PDR.TEST_scales;
+    outlier_scales = PDR.TEST_outlier_scales;
     
     mu = mean(scales);
     scales = sort(scales);
     
-    % lowest test scales:
-    lows = scales(1:round(length(scales)*.333)); % lower third
+    % randomized test scales:
     scale_seq = zeros(1,PDR.ntrials+1);
     start = PDR.npretrials+1;
     stop = PDR.ntrials+1 - mod(PDR.ntrials-PDR.npretrials+1,PDR.TEST_trial_freq);
     nm = floor((stop - start)/PDR.TEST_trial_freq)+1;
-    tmp=ceil(length(lows)*rand(1,nm));
-    scale_seq(start:PDR.TEST_trial_freq:stop) = lows(tmp);
-    
-    % middle scales:
-    mids = scales(round(length(scales)*.333)+1:round(length(scales)*.667)); % middle third
-    % highest scales:
-    highs = scales(round(length(scales)*.667)+1:end);
-    % combine mids and highs
-    mid_hi = [mids highs];
-    
-    % randomized sequence with this pattern:
-    % (hi or med) low (hi or med) low (hi or med) ...
-    FRQ = 2*PDR.TEST_trial_freq;
-    start = PDR.npretrials+1;
-    stop = PDR.ntrials+1 - mod(PDR.ntrials-PDR.npretrials+1,FRQ);
-    nm = floor((stop - start)/FRQ)+1;
-    tmp = ceil(length(mid_hi)*rand(1,nm));
-    scale_seq(start:FRQ:stop) = mid_hi(tmp);
+    tmp=ceil(length(scales)*rand(1,nm));
+    scale_seq(start:PDR.TEST_trial_freq:stop) = scales(tmp);
+
+    % add outliers
+    test_trial_ids=find(scale_seq~=0);
+    len=length(test_trial_ids);
+    for(j=1:PDR.TEST_n_outliers)
+        rand_scale=outlier_scales(ceil(length(outlier_scales)*rand)); % pick a random outlier scale
+        rand_id=ceil(len*rand); % pick a random test trial
+        scale_seq(test_trial_ids(rand_id))= rand_scale; % replace this test trial with an outlier
+    end
     
     PDR.TEST_scale_sequence = scale_seq;
     

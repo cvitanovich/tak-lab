@@ -44,7 +44,8 @@ switch options
         set(gca,'DrawMode','fast');
         set(gca,'yaxislocation','right');
         xlim([0 session.ntrials]); ylim([session.min_yes session.max_yes]);
-        session.hBox=scatter(-1,10^6,30,'w','s');
+        session.hBox=scatter(-1,10^6,30,'r','x');
+        uistack(session.hBox);
         session.trialcnt=0; session.trialval=0;
         
         % session text info
