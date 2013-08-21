@@ -1,7 +1,6 @@
-function KNOWLES=calib_knowles
-% changed to require a single speaker... 9/21/2013
+function SPL_METER=calib_SPL_METER
 % STIMULUS SETUP
-KNOWLES = struct(...
+SPL_METER = struct(...
     'minfreq',2000,...
     'maxfreq',11000,...
     'Fs',30000,...
@@ -13,37 +12,37 @@ KNOWLES = struct(...
 if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
 else
-    data_path='K:\data\knowles\';
+    data_path='K:\data\SPL_METER\';
 end
 
-KNOWLES.data_path=data_path;
+SPL_METER.data_path=data_path;
 
 % setup filename
 c=clock;
-KNOWLES.filename=['knowles_calib_' num2str(c(1)) '_' num2str(c(2)) '_' num2str(c(3)) '_A'];
+SPL_METER.filename=['SPL_METER_calib_' num2str(c(1)) '_' num2str(c(2)) '_' num2str(c(3)) '_A'];
 count = double('A'+0);
-while exist ([KNOWLES.filename '.mat'],'file');
+while exist ([SPL_METER.filename '.mat'],'file');
     count = count + 1;
     if count > 90
         disp('There are already several files with similar names!');
-        KNOWLES.filename = input('Enter a unique filename for this session: ', 's');
+        SPL_METER.filename = input('Enter a unique filename for this session: ', 's');
         break;
     else
-        KNOWLES.filename(end) = char(count);
+        SPL_METER.filename(end) = char(count);
     end
 end
 
-[X,Xtime] = whnoise(KNOWLES.minfreq,KNOWLES.maxfreq,KNOWLES.Fs,KNOWLES.duration);
-KNOWLES.buf_pts = length(Xtime);
+[X,Xtime] = whnoise(SPL_METER.minfreq,SPL_METER.maxfreq,SPL_METER.Fs,SPL_METER.duration);
+SPL_METER.buf_pts = length(Xtime);
 test=Xtime;
 % ramp the test sound (eliminates speaker popping)
 % SOUNDS_ramp should be in ms
-ramp_pts = ceil(KNOWLES.Fs*(KNOWLES.ramp/1000));
+ramp_pts = ceil(SPL_METER.Fs*(SPL_METER.ramp/1000));
 npts = length(test) - 2*ramp_pts - 2;
 rampenv = [0:(1/ramp_pts):1 ones(1,npts) 1:-(1/ramp_pts):0];
 test = test' .* rampenv;
 % store test sound:
-KNOWLES.test = test;
+SPL_METER.test = test;
 
 % INITIALIZE TDT
 % initialize all SystemII hardware
@@ -77,28 +76,27 @@ switch err
 end
 
 
-SRATE =  (1/KNOWLES.Fs)*10^6; % sampling rate for TDT
+SRATE =  (1/SPL_METER.Fs)*10^6; % sampling rate for TDT
 
 % PREPARE PD1 FOR CONVERSION:
-% one speaker output, two knowles inputs
+% one sound output, one recording input!
 s232('PD1clear',1);
 s232('PD1fixbug',1);
-s232('PD1nstrms',1, 1, 2);
+s232('PD1nstrms',1, 1, 1);
 s232('PD1srate',1,SRATE);
-s232('PD1npts',1, KNOWLES.buf_pts);
+s232('PD1npts',1, SPL_METER.buf_pts);
 s232('PD1clrsched',1);
 s232('PD1addsimp',1, s232('IREG',0), s232('DAC',0));
 s232('PD1specIB',1, s232('IB',0), s232('IREG',0));
 s232('PD1setIO',1,.01,9.99,.01,9.99);
 s232('PD1specOB',1,s232('OB',0), s232('ADC',0));
-s232('PD1specOB',1,s232('OB',1), s232('ADC',1));
 % SET PA4 ATTENUATION:
 s232('PA4atten',1,0); % NO ATTEN YET (SET LATER)
 s232('PA4atten',2,0); % NO ATTEN YET (SET LATER)
 
 % allot buffers for voltage trace record
 if s232('APlock',100,0)==1
-    NPTS = KNOWLES.buf_pts;
+    NPTS = SPL_METER.buf_pts;
     
     % play spec list
     CHA_SEQ = s232('_allot16', 10);
@@ -109,15 +107,19 @@ if s232('APlock',100,0)==1
     s232('make',1,0);
     s232('qpop16',PLAY_SPEC);
     
-    PLAYBUF = s232('_allot16', NPTS);
-    
+    PLAYBUF = s232('_allot16', NPTS);    
     BUF_TEST = s232('_allotf', NPTS);
-    s232('pushf',KNOWLES.test, NPTS);
+    s232('pushf',SPL_METER.test, NPTS);
     s232('qpopf',BUF_TEST);
+    
+    % NULL buffer setup
+    BUF_NULL = s232('_allotf', NPTS);
+    s232('pushf',zeros(1,NPTS),NPTS);
+    s232('qpopf',BUF_NULL);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    % play sequences
+    % play sequence
     s232('dpush', 10);
     s232('value', 0);
     s232('make', 0, PLAYBUF);
@@ -125,36 +127,25 @@ if s232('APlock',100,0)==1
     s232('make', 2, 0);
     s232('qpop16', CHA_SEQ);
     
-    % for recording Knowles mic voltage trace
-    RECBUF_L1 = s232('_allot16', NPTS);
-    RECBUF_R1 = s232('_allot16', NPTS);
+    % for recording SPL_METER mic voltage trace
+    RECBUF = s232('_allot16', NPTS);
     
     % record spec list
     REC_SPEC = s232('_allot16', 10);
-    REC_LEFT_SEQ = s232('_allot16', 10);
-    REC_RIGHT_SEQ = s232('_allot16', 10);
-    
+    REC_SEQ = s232('_allot16', 10);
     s232('dpush',10);
     s232('value',0);
-    s232('make',0,REC_LEFT_SEQ);
-    s232('make',1,REC_RIGHT_SEQ);
-    s232('make',2,0);
+    s232('make',0,REC_SEQ);
+    s232('make',1,0);
     s232('qpop16', REC_SPEC);
     
     % record sequences
     s232('dpush',10);
     s232('value',0);
-    s232('make',0, RECBUF_L1);
+    s232('make',0, RECBUF);
     s232('make',1,1);
     s232('make',2,0);
-    s232('qpop16', REC_LEFT_SEQ);
-    
-    s232('dpush',10);
-    s232('value',0);
-    s232('make',0, RECBUF_R1);
-    s232('make',1,1);
-    s232('make',2,0);
-    s232('qpop16', REC_RIGHT_SEQ);
+    s232('qpop16', REC_SEQ);
     
     s232('APunlock', 0);
 else
@@ -162,8 +153,8 @@ else
     return;
 end
 
-% cell array for Knowles calibration data
-attens=10:-10:0;%30:-10:0;
+% cell array for SPL_METER calibration data
+attens=10:-10:0; %30:-10:0;
 
 % loop through a range of scales and get SPL readings
 
@@ -181,31 +172,30 @@ for secs=cntdwn:-1:0
     delete(hTxt);
 end
 close(hCnt)
-hWait = waitbar(0,'Testing Knowles...');
+hWait = waitbar(0,'Testing SPL_METER...');
 scalez=scalez(randperm(length(scalez)));
 voltages=NaN*ones(1,length(scalez));
 
 % initialize variables
-KNOWLES.attens=[];
-KNOWLES.scales=[];
-KNOWLES.voltages=[];
-KNOWLES.spls=[];
+SPL_METER.attens=[];
+SPL_METER.scales=[];
+SPL_METER.voltages=[];
+SPL_METER.spls=[];
+
 num_trials=length(attens)*length(scalez);
 prog=0;
 for hh=1:length(attens)
     cnt=0; spls=[]; voltages=[];
     % set attens
     s232('PA4atten',1,attens(hh));
-    s232('PA4atten',2,attens(hh));
     ii=0;
     while ii<length(scalez)
         ii=ii+1;
         cnt=cnt+1;
         prog=prog+1;
         scale=scalez(ii);
-        pause(1); % pause 
+        pause(1); % two second pause 
         s232('dropall'); % clear the stack
-        % play sound
         s232('qpushf',BUF_TEST);
         s232('scale',scale);
         s232('qpop16',PLAYBUF);
@@ -218,28 +208,18 @@ for hh=1:length(attens)
             % wait for TDT to finish
         end
         % pop recorded voltage traces into matlab
-        if exist('left_tmp')
-            clear left_tmp;
+        if exist('tmp')
+            clear tmp;
         end
-        if exist('right_tmp')
-            clear right_tmp;
-        end
-        s232('qpush16', RECBUF_L1);
-        left_tmp=s232('pop16');
-        s232('qpush16', RECBUF_R1);
-        right_tmp=s232('pop16');
-        % calculate rms voltages and average across both ears
-        left_tmp = left_tmp - mean(left_tmp);
-        right_tmp = right_tmp - mean(right_tmp);
-        % calculate rms voltages
-        left_rms = sqrt(sum(left_tmp.^2)./length(left_tmp));
-        right_rms = sqrt(sum(right_tmp.^2)./length(right_tmp));
-        avg_rms = (left_rms + right_rms)/2;
-        voltages(ii)=avg_rms;
+        s232('qpush16', RECBUF);
+        tmp=s232('pop16');
+        % calculate rms voltage
+        tmp = tmp - mean(tmp);
+        rms = sqrt(sum(tmp.^2)./length(tmp));
+        voltages(ii)=rms;
         def{cnt}='';
         prompt{cnt}=['Trial #' num2str(prog)];
         % get spl readings if step reached
-
         if cnt == step || ii==length(scalez)
             button = questdlg('Do you want to repeat those trials?',...
                 'Continue Operation','Yes','No','No');
@@ -289,46 +269,46 @@ for hh=1:length(attens)
         spls_sorted(id)=spls(find(scalez==scalez_sorted(id)));
         voltages_sorted(id)=voltages(find(scalez==scalez_sorted(id)));
     end
-    KNOWLES.attens=[KNOWLES.attens attens(hh)*ones(1,length(scalez))];
-    KNOWLES.scales=[KNOWLES.scales scalez_sorted];
-    KNOWLES.voltages=[KNOWLES.voltages voltages_sorted];
-    KNOWLES.spls=[KNOWLES.spls spls_sorted];
+    SPL_METER.attens=[SPL_METER.attens attens(hh)*ones(1,length(scalez))];
+    SPL_METER.scales=[SPL_METER.scales scalez_sorted];
+    SPL_METER.voltages=[SPL_METER.voltages voltages_sorted];
+    SPL_METER.spls=[SPL_METER.spls spls_sorted];
 end
 close(hWait)
-% REGRESSION FIT FOR KNOWLES CALIBRATION
+% REGRESSION FIT FOR SPL_METER CALIBRATION
 screen_size = get(0, 'ScreenSize');
-hKnowles=figure;
-set(hKnowles, 'Position', [0.02*screen_size(3) 0.05*screen_size(4) 0.95*screen_size(3) 0.8*screen_size(4)] );
+hSPL_METER=figure;
+set(hSPL_METER, 'Position', [0.02*screen_size(3) 0.05*screen_size(4) 0.95*screen_size(3) 0.8*screen_size(4)] );
 a=0.05; %alpha
 hold on;
-% exponential regression of avg rms
+% exponential regression of rms for lead/lag pairs
 colr = [0 0 1];
 % combine data for all attenuations
-xes=KNOWLES.spls;
-yes=KNOWLES.voltages;
+xes=SPL_METER.spls;
+yes=SPL_METER.voltages;
 xind = (max(xes)-min(xes))/100;
 xrange = min(xes):xind:max(xes);
 beta0=[.05 .2 min(yes)]; % ballpark guess of coefficients for exponential fit
-[KNOWLES.rsquared, KNOWLES.coeffs] = regress_stats_exponential(xes,yes,a,xrange,colr,beta0);
+[SPL_METER.rsquared, SPL_METER.coeffs] = regress_stats_exponential(xes,yes,a,xrange,colr,beta0);
 ax_lead = gca; set(ax_lead,'XColor',colr,'YColor',colr);
 % title string
-title_string{1} = ['Binaural Mean RMS Voltage vs. Decibels (SPL)'];
-title_string{2} = ['RSQ = ' num2str(KNOWLES.rsquared)];
-title_string{3} = ['RMS Voltage = ' num2str(KNOWLES.coeffs(1)) '*' 'e^{SPL*' num2str(KNOWLES.coeffs(2)) '} + ' num2str(KNOWLES.coeffs(3))];
+title_string{1} = ['Mean RMS Voltage vs. Decibels (SPL)'];
+title_string{2} = ['RSQ = ' num2str(SPL_METER.rsquared)];
+title_string{3} = ['RMS Voltage = ' num2str(SPL_METER.coeffs(1)) '*' 'e^{SPL*' num2str(SPL_METER.coeffs(2)) '} + ' num2str(SPL_METER.coeffs(3))];
 title(title_string,'FontSize',8);
 % axes labels
 xlabel('Level (dB SPL)','FontSize',8);
-ylabel('RMS Voltage (averaged across mics)','FontSize',8);
+ylabel('RMS Voltage','FontSize',8);
 axis tight
 hold off;
 set(gcf,'InvertHardcopy','off');
-fname = [KNOWLES.data_path KNOWLES.filename '_regressfit'];
-saveas(hKnowles,fname,'fig');
+fname = [SPL_METER.data_path SPL_METER.filename '_regressfit'];
+saveas(hSPL_METER,fname,'fig');
 
 %write header information to file... saving global variables
-save ([KNOWLES.data_path KNOWLES.filename '.mat'],'KNOWLES');
+save ([SPL_METER.data_path SPL_METER.filename '.mat'],'SPL_METER');
 clear str
 str{1} = 'Variables saved in: ';
-str{2} = [KNOWLES.data_path KNOWLES.filename '.mat'];
+str{2} = [SPL_METER.data_path SPL_METER.filename '.mat'];
 hMsg=msgbox(str); uiwait(hMsg);
 

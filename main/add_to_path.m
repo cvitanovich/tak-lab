@@ -1,14 +1,23 @@
 % ADDS THIS CODE REPOSITORY TO THE MATLAB PATH
+
 current=pwd;
 tmp=which('add_to_path');
 tmp=tmp(1:end-13);
 cd(tmp);
-keyboard
+addpath(genpath(tmp));
+cd(current);
+
+% OLD don't use
+if(0)
+current=pwd;
+tmp=which('add_to_path');
+tmp=tmp(1:end-13);
+cd(tmp);
 addpath(genpath(tmp));
 cd .git
 rmpath(genpath(pwd));
 cd(current);
-
+end
 
 % OLD APPROACH
 if(0)
