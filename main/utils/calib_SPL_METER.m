@@ -6,13 +6,15 @@ SPL_METER = struct(...
     'Fs',30000,...
     'duration',5,...
     'ramp',5,...
+    'attens',[25 20 15 10 5],...
+    'scales',3000:3000:30000,...
     'data_path','',...
     'filename',[]);
 
 if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
 else
-    data_path='K:\data\SPL_METER\';
+    data_path='C:\andrew\data\calib\';
 end
 
 SPL_METER.data_path=data_path;
@@ -153,13 +155,10 @@ else
     return;
 end
 
-% cell array for SPL_METER calibration data
-attens=10:-10:0; %30:-10:0;
-
 % loop through a range of scales and get SPL readings
-
+scalez=SPL_METER.scales;
+attens=SPL_METER.attens;
 step=10; cntdwn=20; cnt=0; spls=[];
-scalez=1000:2000:30000; % scales to use for SPL readings for each attenuation level
 str{1}=['Get ready to measure SPLs for ' num2str(length(scalez)*length(attens)) ' sounds'];
 str{2}=['in steps of ' num2str(step)];
 hMsg=msgbox(str); 
@@ -172,7 +171,7 @@ for secs=cntdwn:-1:0
     delete(hTxt);
 end
 close(hCnt)
-hWait = waitbar(0,'Testing SPL_METER...');
+hWait = waitbar(0,'Testing SPL METER...');
 scalez=scalez(randperm(length(scalez)));
 voltages=NaN*ones(1,length(scalez));
 

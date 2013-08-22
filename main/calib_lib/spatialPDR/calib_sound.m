@@ -1,4 +1,4 @@
-function C=calib_sound(C)
+function C=calib_sound(C,MIC)
 %% CHECK POINT
 if strcmp(C.MIC_TYPE,'Knowles')
     h=warndlg({'USING KNOWLES MICS FOR INTRAURAL CALIBRATIONS','CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???'},'warning');
@@ -7,6 +7,15 @@ else
     h=warndlg('Calibrating speaker output with a single mic (SPL Meter?)... OKAY???','warning');
     uiwait(h);
 end
+if(C.EPHONES)
+    h=warndlg('Using earphones, not speaker, okay?','warning');
+    uiwait(h);
+else
+    h=warndlg('Using speaker, okay?','warning');
+    uiwait(h);
+end
+h=warndlg('RESET S232 Controller, okay?','warning');
+uiwait(h);
 
 %% INITIALIZE TDT:
 if strcmp(C.MIC_TYPE,'Knowles')
@@ -66,66 +75,66 @@ elseif strcmp(C.MIC_TYPE,'SPL Meter')
 end
 
 %% PLAY SOUNDS AND RECORD VOLTAGE FROM MICS, THEN ANALYZE
-if strcmp(C.MIC_TYPE,'Knowles')
-    eval(['left_snd = C.' C.sounds{cnt} '_left;']);
-    eval(['right_snd = C.' C.sounds{cnt} '_right;']);
-    [lo, hi] = det_cutoffs(C.scales_2_try_for_cutoffs, left_snd, right_snd);
-else % using SPL Meter (speaker)
-    eval(['snd = C.' C.sounds{cnt} '_sound;']);
-    [lo, hi] = det_cutoffs(C.scales_2_try_for_cutoffs, snd);
+for cnt=length(C.sounds)
+    if strcmp(C.MIC_TYPE,'Knowles')
+        eval(['left_snd = C.' C.sounds{cnt} '_left;']);
+        eval(['right_snd = C.' C.sounds{cnt} '_right;']);
+        [lo, hi] = det_cutoffs(C,TDT,MIC,C.scales_2_try_for_cutoffs, left_snd, right_snd);
+    else % using SPL Meter (speaker)
+        eval(['snd = C.' C.sounds{cnt} '_sound;']);
+        [lo, hi] = det_cutoffs(C,TDT,MIC,C.scales_2_try_for_cutoffs, snd);
+    end
+    lo=round(10^lo); hi=round(10^hi);
+    scales=lo:((hi-lo)/C.nscales):hi;
+    if strcmp(C.MIC_TYPE,'Knowles')
+        rms = test_scales(C,TDT,scales, left_snd, right_snd);
+    else
+        rms = test_scales(C,TDT,scales, snd);
+    end
+    dbs = (1/MIC.coeffs(2))*log( (rms - MIC.coeffs(3)) ./ MIC.coeffs(1) );
+    % REGRESSION FIT
+    h=figure;
+    hold on;
+    xrange = log10(1:1:32760);
+    xes = log10(scales);
+    yes = dbs;
+    colr = [1 0 0];
+    [rsq, coefs] = regress_stats(xes,yes,0.05,xrange,colr,1);
+    eval(['C.' C.sounds{cnt} '_RSQ = rsq;']);
+    eval(['C.' C.sounds{cnt} '_COEFS= coefs;']);
+    % title string
+    title_string=[];
+    title_string{1} = ['SOUND IS: ' C.sounds{cnt}];
+    title_string{2} = ['RSQ = ' num2str(rsq)];
+    title(title_string,'FontSize',8);
+    % axes labels
+    xlabel('log10(scales)','FontSize',8);
+    if strcmp(C.MIC_TYPE,'Knowles')
+        ylabel('SPL (dB, ABL)','FontSize',8);
+    else
+        ylabel('SPL (dB)','FontSize',8);
+    end
+    hold off;
+    % save this figure
+    set(h,'InvertHardcopy','off');
+    fname = [C.data_path C.filename '_fit'];
+    saveas(h,fname,'fig');
+    %write header information to file... saving global variables
+    save ([C.data_path C.filename '.mat'],'C','TDT');
+    str{1} = 'Variables saved in: ';
+    str{2} = [C.data_path C.filename '.mat'];
+    hMsg=msgbox(str); uiwait(hMsg);
 end
-lo=round(10^lo); hi=round(10^hi);
-scales=lo:((hi-lo)/C.nscales):hi;
-if strcmp(C.MIC_TYPE,'Knowles')
-    rms = test_scales(scales, left_snd, right_snd);
-else
-    rms = test_scales(scales, snd);
-end
-dbs = (1/C.coeffs(2))*log( (rms - C.coeffs(3)) ./ C.coeffs(1) );
-% REGRESSION FIT
-h=figure;
-hold on;
-xrange = log10(1:1:32760);
-xes = log10(scales);
-yes = dbs;
-colr = [1 0 0];
-[rsq, coefs] = regress_stats(xes,yes,0.05,xrange,colr,1);
-eval(['C.' C.sounds{cnt} '_RSQ = rsq;']);
-eval(['C.' C.sounds{cnt} '_COEFS= coefs;']);
-% title string
-title_string=[];
-title_string{1} = ['SOUND IS: ' C.sounds{cnt}];
-title_string{2} = ['RSQ = ' num2str(rsq)];
-title(title_string,'FontSize',8);
-% axes labels
-xlabel('log10(scales)','FontSize',8);
-if strcmp(C.MIC_TYPE,'Knowles')
-    ylabel('SPL (dB, ABL)','FontSize',8);
-else
-    ylabel('SPL (dB)','FontSize',8);
-end
-hold off;
-% save this figure
-set(h,'InvertHardcopy','off');
-fname = [C.data_path C.filename '_fit'];
-saveas(h,fname,'fig');
-%write header information to file... saving global variables
-save ([C.data_path C.filename '.mat'],'C','TDT','HRTF');
-str{1} = 'Variables saved in: ';
-str{2} = [C.data_path C.filename '.mat'];
-hMsg=msgbox(str); uiwait(hMsg);
-
 
 %% SUBROUTINES
-function [lo, hi] = det_cutoffs(scales2try,snd0,snd1)
-global MIC
-if(nargin==3)
-    left_snd=snd0; clear(snd0);
-    right_snd=snd1; clear(snd1);
-    rms = test_scales(scales2try,left_snd,right_snd);
+function [lo, hi] = det_cutoffs(C,TDT,MIC,scales2try,snd0,snd1)
+if(nargin>5)
+    left_snd=snd0;
+    right_snd=snd1;
+    rms = test_scales(C,TDT,scales2try,left_snd,right_snd);
 else
-    snd=snd0; clear(snd0);
-    rms = test_scales(scales2try,snd);
+    snd=snd0;
+    rms = test_scales(C,TDT,scales2try,snd);
 end
 % select cutoffs
 dbs = (1/MIC.coeffs(2))*log( (rms - MIC.coeffs(3)) ./ MIC.coeffs(1) );
@@ -155,26 +164,25 @@ hi=str2num(answer{2});
 close(hFig);
 drawnow;
 
-function rms = test_scales(scales,snd0,snd1)
-global TDT C
-if(nargin==3)
+function rms = test_scales(C,TDT,scales,snd0,snd1)
+if(nargin>4)
     % two outputs (headphones)
-    left_snd=snd0; clear(snd0);
-    right_snd=snd1; clear(snd1);
+    left_snd=snd0;
+    right_snd=snd1;
     s232('pushf',left_snd, TDT.buf_pts);
     s232('qpopf',C.TMP_LT);
     s232('pushf',right_snd, TDT.buf_pts);
     s232('qpopf',C.TMP_RT);
 else
     % one output (speaker)
-    snd=snd0; clear(snd0);
+    snd=snd0;
     s232('pushf',snd,TDT.buf_pts);
     s232('qpopf',C.TMP)
 end
  hWait=waitbar(0,'playing sounds...');
 
 for j=1:length(scales)
-    if(nargin==3)
+    if(nargin>4)
         % two outputs (headphones)
         S232('qpushf',C.TMP_LT);
         S232('scale',scales(j));
@@ -212,7 +220,8 @@ for j=1:length(scales)
         rms(j) = (left_rms + right_rms)/2;
     else
         s232('qpush16',TDT.rec_buffers{1}(1));
-        rms=s232('pop16'); % one mic (no need to average)
+        tmp=s232('pop16'); % one mic (no need to average)
+        rms(j)=sqrt(mean(tmp.^2));
     end 
 	waitbar(j/length(scales),hWait);
 end

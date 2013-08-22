@@ -3,22 +3,22 @@
 
 %% PARAMETERS:
 % note: microphones should also be calibrated for SPL vs. Voltage on the same day
-C.data_path='K:\data\calib\'
+C.data_path='C:\andrew\data\calib\';
 % attens to try
-C.atten_list=0:20:100;
+C.atten_list=25:-5:5;
 % what scales to try?
 C.scales_2_try_for_cutoffs=fliplr(10.^([0:.09:4.5 log10(32760)]));
+C.nscales=50;
 C.stim_Fs=30000;
 C.buf_pts=30000; % 1 sec sounds
 C.stim_dur = C.buf_pts/C.stim_Fs;
 % HRTF coefficients file:
-if(C.HRTFs==1)
-    C.HRTF_fname=''; % what file to use for HRTFs???
-    C.HRTF_nlines=255;
-    C.HRTF_directory='';
-    C.HRTF_Left=[]; % left coefs
-    C.HRTF_Right=[]; % right coefs
-end
+C.HRTF_fname='1073AC_eq_ABLequal.mat'; % what file to use for HRTFs???
+C.HRTF_nlines=255;
+C.HRTF_directory='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\main\HRTFs\Matlab_V6\';
+C.HRTF_Left=[]; % left coefs
+C.HRTF_Right=[]; % right coefs
+
 % sounds
 C.sounds = {'GTONE','OCTAVE','BBN'};
 C.ramp = 5; % 5 ms ramp
@@ -34,12 +34,12 @@ mo=num2str(c(2)); day=num2str(c(3));
 
 
 %% LOAD KNOWLES VOLTAGE CALIBRATIONS:
-uiopen([C.data_path 'knowles\' 'knowles*.mat']);
+uiopen([C.data_path 'knowles*.mat']);
 C.knowles_file = [KNOWLES.data_path KNOWLES.filename];
 disp(['Loaded Knowles Mic calibrations from: ' C.knowles_file]);
 
 %% LOAD SPL METER VOLTAGE CALIBRATIONS:
-uiopen([C.data_path 'spl_meter\' 'spl_meter*.mat']);
+uiopen([C.data_path 'spl_meter*.mat']);
 C.spl_meter_file = [SPL_METER.data_path SPL_METER.filename];
 disp(['Loaded SPL Meter calibrations from: ' C.spl_meter_file]);
 
@@ -185,14 +185,13 @@ C.GTONE_left = rampMySound(C.GTONE_left,C.ramp,C.stim_Fs);
 C.GTONE_right = rampMySound(C.GTONE_right,C.ramp,C.stim_Fs);
 C.GTONE_sound = rampMySound(C.GTONE_sound,C.ramp, C.stim_Fs);
 
-%% CALIBRATE INTRAURALLY, USING SPEAKERS
-C.HRTFs=0; C.EPHONES=0; C.SPEAKERS=1;
-% what atten to use?
-C.attens=[0 0]; % left/right attens for TDT
-% mic_type = Knowles or SPL meter
-C.MIC_TYPE='Knowles';
-C.CALIB_TYPE='Intraural';
 
+%% NO BIRD, JUST SPEAKER AND SPL METER
+C.HRTFs=0; C.EPHONES=0; C.SPEAKERS=1;
+% mic_type = Knowles or SPL meter
+C.MIC_TYPE='SPL Meter';
+C.CALIB_TYPE='Intraural';
+MIC.coeffs = SPL_METER.coeffs;
 for j=length(C.sounds)
     % sound type
     snd=C.sounds{j};
@@ -200,9 +199,50 @@ for j=length(C.sounds)
         % atten
         C.current_atten=C.atten_list(k);
         % filenames
-        C.filename=['Calib' C.CALIB_TYPE C.MIC_TYPE '_' snd '_' yr mo day '_Atten' num2str(C.atten)];
+        C.filename=['Calib' C.CALIB_TYPE C.MIC_TYPE '_' snd '_' yr mo day '_Atten' num2str(C.current_atten)];
         % run calibration code
-        C=calib_sound(C);
+        C=calib_sound(C,MIC);
+        % done. now mov on to the next atten/sound
+    end
+end
+
+%% CALIBRATE INTRAURALLY, USING SPEAKERS
+C.HRTFs=0; C.EPHONES=0; C.SPEAKERS=1;
+% mic_type = Knowles or SPL meter
+C.MIC_TYPE='Knowles';
+C.CALIB_TYPE='Intraural';
+MIC.coeffs=KNOWLES.coeffs;
+for j=length(C.sounds)
+    % sound type
+    snd=C.sounds{j};
+    for k=length(C.atten_list)
+        % atten
+        C.current_atten=C.atten_list(k);
+        % filenames
+        C.filename=['Calib' C.CALIB_TYPE C.MIC_TYPE '_' snd '_' yr mo day '_Atten' num2str(C.current_atten)];
+        % run calibration code
+        C=calib_sound(C,MIC);
+        % done. now mov on to the next atten/sound
+    end
+end
+
+
+%% CALIBRATE INTRAURALLY, USING HEADPHONES & HRTFs
+C.HRTFs=1; C.EPHONES=1; C.SPEAKERS=0;
+% mic_type = Knowles or SPL meter
+C.MIC_TYPE='Knowles';
+C.CALIB_TYPE='Intraural';
+MIC.coeffs=KNOWLES.coeffs;
+for j=length(C.sounds)
+    % sound type
+    snd=C.sounds{j};
+    for k=length(C.atten_list)
+        % atten
+        C.current_atten=C.atten_list(k);
+        % filenames
+        C.filename=['Calib' C.CALIB_TYPE C.MIC_TYPE '_' snd '_' yr mo day '_Atten' num2str(C.current_atten)];
+        % run calibration code
+        C=calib_sound(C,MIC);
         % done. now mov on to the next atten/sound
     end
 end
