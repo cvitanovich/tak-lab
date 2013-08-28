@@ -1,4 +1,4 @@
-function C=calib_sound(C,MIC)
+function C=calib_sound(C,HRTF)
 %% CHECK POINT
 if strcmp(C.MIC_TYPE,'Knowles')
     h=warndlg({'USING KNOWLES MICS FOR INTRAURAL CALIBRATIONS','CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???'},'warning');
@@ -14,25 +14,28 @@ else
     h=warndlg('Using speaker, okay?','warning');
     uiwait(h);
 end
-h=warndlg('RESET S232 Controller, okay?','warning');
-uiwait(h);
 
 %% INITIALIZE TDT:
-if strcmp(C.MIC_TYPE,'Knowles')
+if(C.EPHONES)
     TDT.nPlayChannels=2;
-    TDT.nRecChannels=2; % one for each mic!
     TDT.playpts={C.buf_pts,C.buf_pts};
-elseif strcmp(C.MIC_TYPE,'SPL Meter')
+else
     TDT.nPlayChannels=1;
-    TDT.nRecChannels=1;
     TDT.playpts={C.buf_pts};
+end
+
+if strcmp(C.MIC_TYPE,'Knowles')
+    TDT.nRecChannels=2; % one for each mic!
+    TDT.recpts={C.buf_pts,C.buf_pts};
+elseif strcmp(C.MIC_TYPE,'SPL Meter')
+    TDT.nRecChannels=1;
+    TDT.recpts={C.buf_pts};
 else
     h=warndlg('Improper option for microphone type!','warning');
     uiwait(h);
     return;
 end
 
-TDT.recpts=TDT.playpts;
 TDT.din = 1;
 TDT.Fs = C.stim_Fs;
 TDT.npts_total_play=C.buf_pts;
@@ -42,146 +45,140 @@ TDT.buf_pts=C.buf_pts;
 
 % TDT INIT
 out=TDT_init;
-if(out==-1); return; end;
-
-% PD1 SETUP
-if strcmp(C.MIC_TYPE,'Knowles')
-    PD1_Route_IntrauralKnowles(TDT);
-elseif strcmp(C.MIC_TYPE,'SPL Meter')
-    PD1_Route_Speaker(TDT);
-else
-    h=warndlg('Improper option for microphone type!','warning');
-    uiwait(h);
-    return;
+if(out==-1)
+    h=warndlg('RESET S232 Controller, okay?','warning'); uiwait(h);
 end
 
-% attenuator settings
-for(j=TDT.nPlayChannels)
-    S232('PA4atten',j,C.current_atten);
+% PD1 SETUP
+if(C.EPHONES)
+    PD1_Route_Earphones(TDT);
+else
+    PD1_Route_Speaker(TDT);
 end
 
 %% INITIALIZE BUFFERS
 TDT=TDT_buffers(TDT);
-if strcmp(C.MIC_TYPE,'Knowles')
+if(C.EPHONES)
     C.TMP_LT=TDT.n_total_buffers+1;
     S232('allotf',C.TMP_LT,TDT.buf_pts);
     C.TMP_RT=TDT.n_total_buffers+2;
     S232('allotf',C.TMP_RT,TDT.buf_pts);
     TDT.n_total_buffers=TDT.n_total_buffers+2;
-elseif strcmp(C.MIC_TYPE,'SPL Meter')
+else
     C.TMP=TDT.n_total_buffers+1;
     S232('allotf',C.TMP,TDT.buf_pts);
     TDT.n_total_buffers=TDT.n_total_buffers+1;
 end
 
-%% PLAY SOUNDS AND RECORD VOLTAGE FROM MICS, THEN ANALYZE
-for cnt=length(C.sounds)
-    if strcmp(C.MIC_TYPE,'Knowles')
-        eval(['left_snd = C.' C.sounds{cnt} '_left;']);
-        eval(['right_snd = C.' C.sounds{cnt} '_right;']);
-        [lo, hi] = det_cutoffs(C,TDT,MIC,C.scales_2_try_for_cutoffs, left_snd, right_snd);
-    else % using SPL Meter (speaker)
-        eval(['snd = C.' C.sounds{cnt} '_sound;']);
-        [lo, hi] = det_cutoffs(C,TDT,MIC,C.scales_2_try_for_cutoffs, snd);
+%% LOAD HRTFs IF USED
+if(C.EPHONES && C.HRTFs)
+    load_HRTF_coefs(HRTF,TDT);
+elseif(C.EPHONES && ~C.HRTFs)
+    % ephones w/o filtering
+    HRTF.nlines = 255;
+    HRTF.left = [0.99999 zeros(1,254)];
+    HRTF.right = HRTF.left;
+else
+    % do nothing
+end
+
+% date
+c=clock; c=round(c);
+yr=num2str(c(1)); yr=yr(end-1:end);
+mo=num2str(c(2)); day=num2str(c(3));
+
+for j=1:length(C.sounds)
+    % sound type
+    current_snd=C.sounds{j};
+    
+    % filename
+    C.filename=['Calib' C.CALIB_TYPE C.MIC_TYPE];
+    if(C.HRTFs)
+        C.filename=[C.filename '_HRTFs'];
     end
-    lo=round(10^lo); hi=round(10^hi);
-    scales=lo:((hi-lo)/C.nscales):hi;
-    if strcmp(C.MIC_TYPE,'Knowles')
-        rms = test_scales(C,TDT,scales, left_snd, right_snd);
-    else
-        rms = test_scales(C,TDT,scales, snd);
+    if(C.EPHONES)
+        C.filename=[C.filename '_EPHONES'];
     end
-    dbs = (1/MIC.coeffs(2))*log( (rms - MIC.coeffs(3)) ./ MIC.coeffs(1) );
-    % REGRESSION FIT
-    h=figure;
-    hold on;
-    xrange = log10(1:1:32760);
-    xes = log10(scales);
-    yes = dbs;
-    colr = [1 0 0];
-    [rsq, coefs] = regress_stats(xes,yes,0.05,xrange,colr,1);
-    eval(['C.' C.sounds{cnt} '_RSQ = rsq;']);
-    eval(['C.' C.sounds{cnt} '_COEFS= coefs;']);
-    % title string
-    title_string=[];
-    title_string{1} = ['SOUND IS: ' C.sounds{cnt}];
-    title_string{2} = ['RSQ = ' num2str(rsq)];
-    title(title_string,'FontSize',8);
-    % axes labels
-    xlabel('log10(scales)','FontSize',8);
-    if strcmp(C.MIC_TYPE,'Knowles')
-        ylabel('SPL (dB, ABL)','FontSize',8);
-    else
-        ylabel('SPL (dB)','FontSize',8);
+    if(C.SPEAKERS)
+        C.filename=[C.filename '_SPEAKERS'];
     end
-    hold off;
-    % save this figure
-    set(h,'InvertHardcopy','off');
-    fname = [C.data_path C.filename '_fit'];
-    saveas(h,fname,'fig');
+    C.filename=[C.filename '_' current_snd '_' yr mo day];
+    
+    ATTENS=[];SCALES=[];VOLTAGES=[];
+    for k=1:length(C.attens)
+        current_atten=C.attens(k);
+        % attenuator settings
+        for(j=1:TDT.nPlayChannels)
+            S232('PA4atten',j,current_atten);
+        end
+        ATTENS=[ATTENS current_atten.*ones(1,length(C.scales))];
+        SCALES=[SCALES C.scales];
+        %% PLAY SOUNDS AND RECORD VOLTAGE FROM MICS
+        if(C.EPHONES)
+            eval(['left_snd = C.' current_snd '_sound;']);
+            eval(['right_snd = C.' current_snd '_sound;']);
+            v = test_scales(C,TDT,C.scales, left_snd, right_snd);
+        else % using SPL Meter (speaker)
+            eval(['snd = C.' current_snd '_sound;']);
+            v = test_scales(C,TDT,C.scales, snd);
+        end
+        VOLTAGES=[VOLTAGES v];
+        close all; figure; plot(C.scales,v);
+        xlabel('SCALES'); ylabel('RMS VOLTAGE (mV)'); title([current_snd ', Atten = ' num2str(current_atten)]);
+    end
+    
+    %write data to a text file:
+    fname=[C.data_path C.filename 'A'];
+    count = double('A'+0);
+    while exist ([fname '.txt'],'file');
+    count = count + 1;
+        if count > 90
+            disp('There are already several files with similar names!');
+            fname = input('Enter a unique filename for this data file: ', 's');
+            break;
+        else
+        fname(end) = char(count);
+        end
+    end
+    fid = fopen([fname '.txt'],'w');
+    DATA=[ATTENS; SCALES; VOLTAGES];
+    formatSpec='%3.1f\t%5.0f\t%5.3f\n';
+    nbytes=fprintf(fid,formatSpec,DATA);
+    fclose(fid);
+    disp(['Saved data as: ' C.filename '.txt']);
+    disp(['Wrote ' num2str(nbytes/1000) ' kBytes of calibration data...']);
+    
     %write header information to file... saving global variables
-    save ([C.data_path C.filename '.mat'],'C','TDT');
-    str{1} = 'Variables saved in: ';
-    str{2} = [C.data_path C.filename '.mat'];
-    hMsg=msgbox(str); uiwait(hMsg);
+    if(C.HRTFs)
+        save ([fname '.mat'],'C','TDT','HRTF');
+    else
+        save ([fname '.mat'],'C','TDT');
+    end
+    disp(['Variables saved in: ' C.data_path C.filename '.mat']);
 end
 
 %% SUBROUTINES
-function [lo, hi] = det_cutoffs(C,TDT,MIC,scales2try,snd0,snd1)
-if(nargin>5)
-    left_snd=snd0;
-    right_snd=snd1;
-    rms = test_scales(C,TDT,scales2try,left_snd,right_snd);
-else
-    snd=snd0;
-    rms = test_scales(C,TDT,scales2try,snd);
-end
-% select cutoffs
-dbs = (1/MIC.coeffs(2))*log( (rms - MIC.coeffs(3)) ./ MIC.coeffs(1) );
-[lo, hi] = select_cutoffs(log10(scales2try),dbs);
-if hi>log10(32760)
-    hi=log10(32760);
-end
-if lo<0
-    lo=0;
-end
-
-function [lo, hi] = select_cutoffs(xes,yes)
-% Plots data in a scatter plot and asks user to input lo/hi cuttoffs
-% for fitting linear portion of data range
-screen_size = get(0, 'ScreenSize');
-hFig=figure;
-set(hFig, 'Position', [0.02*screen_size(3) 0.05*screen_size(4) 0.8*screen_size(3) 0.8*screen_size(4)] );
-
-scatter(xes,yes,'.');
-prompt = {'Enter Lower Cutoff','Enter Upper Cutoff'};
-dlg_title = 'Input Cutoffs:';
-num_lines = 1;
-def = {'',''};
-answer = inputdlg(prompt,dlg_title,num_lines,def);
-lo=str2num(answer{1});
-hi=str2num(answer{2});
-close(hFig);
-drawnow;
-
-function rms = test_scales(C,TDT,scales,snd0,snd1)
+function rms = test_scales(C,TDT,scales,current_snd0,current_snd1)
+% filename for saving voltage trace
+FNAME=[C.data_path C.filename];
+left_rms=[]; right_rms=[];
 if(nargin>4)
     % two outputs (headphones)
-    left_snd=snd0;
-    right_snd=snd1;
-    s232('pushf',left_snd, TDT.buf_pts);
+    left_current_snd=current_snd0;
+    right_current_snd=current_snd1;
+    s232('pushf',left_current_snd, TDT.buf_pts);
     s232('qpopf',C.TMP_LT);
-    s232('pushf',right_snd, TDT.buf_pts);
+    s232('pushf',right_current_snd, TDT.buf_pts);
     s232('qpopf',C.TMP_RT);
 else
     % one output (speaker)
-    snd=snd0;
-    s232('pushf',snd,TDT.buf_pts);
+    current_snd=current_snd0;
+    s232('pushf',current_snd,TDT.buf_pts);
     s232('qpopf',C.TMP)
 end
- hWait=waitbar(0,'playing sounds...');
-
+hWait=waitbar(0,'playing sounds...');
 for j=1:length(scales)
+    s232('dropall');
     if(nargin>4)
         % two outputs (headphones)
         S232('qpushf',C.TMP_LT);
@@ -196,7 +193,6 @@ for j=1:length(scales)
         S232('scale',scales(j));
         s232('qpop16',TDT.stim_buffers{1}(1));
     end
-    
     S232('seqplay',TDT.play_spec);
     % recording voltage
     s232('seqrecord',TDT.rec_spec);
@@ -209,90 +205,45 @@ for j=1:length(scales)
     if exist('left_tmp'); clear left_tmp; end;
     if exist('right_tmp'); clear right_tmp; end;
     if exist('tmp'); clear tmp; end;
-    if(nargin==3)
+    if(strcmp(C.MIC_TYPE,'Knowles'))
+        % get record buffer for left ear
         S232('qpush16', TDT.rec_buffers{1}(1));
+        S232('qdup');
         left_tmp=S232('pop16');
+        % save to disc
+        S232('make',0,1);
+        S232('qpop16',TDT.rec_buffers{1}(1));
+        S232('dama2disk16',TDT.rec_buffers{1}(1),[FNAME '_left.rec'],1);
+        % get record buffer for right ear
         S232('qpush16', TDT.rec_buffers{2}(1));
+        S232('qdup');
         right_tmp=S232('pop16');
+        % save to disc
+        S232('make',0,1);
+        S232('qpop16',TDT.rec_buffers{2}(1));
+        S232('dama2disk16',TDT.rec_buffers{2}(1),[FNAME '_right.rec'],1);
         % calculate rms voltage
-        left_rms = sqrt(mean(left_tmp.^2));
-        right_rms = sqrt(mean(right_tmp.^2));
-        rms(j) = (left_rms + right_rms)/2;
+        left_tmp = left_tmp - mean(left_tmp);
+        right_tmp = right_tmp - mean(right_tmp);
+        left_rms(end+1) = sqrt(mean(left_tmp.^2));
+        right_rms(end+1) = sqrt(mean(right_tmp.^2));
+        rms(j) = (left_rms(end) + right_rms(end))/2;
     else
         s232('qpush16',TDT.rec_buffers{1}(1));
+        S232('qdup');
         tmp=s232('pop16'); % one mic (no need to average)
+        % save to disc
+        S232('make',0,1);
+        S232('qpop16',TDT.rec_buffers{1}(1));
+        S232('dama2disk16',TDT.rec_buffers{1}(1),[FNAME '.rec'],1);
+        tmp = tmp - mean(tmp);
         rms(j)=sqrt(mean(tmp.^2));
     end 
 	waitbar(j/length(scales),hWait);
 end
 close(hWait);
 
-% REGRESSION STATS
-function [RSQ, COEFFS] = regress_stats(xes,yes,alfa,xrange,col,info_flg)
-% plot data
-n=length(yes);
-df=length(yes)-2;
-for j = 1:n
-    plot(xes,yes,'.','Color',col);
-end
-% determine fit coefficients and CI
-[p, S] = polyfit(xes,yes,1);
-[Y,DELTA]=polyconf(p,xrange,S,alfa);
-m=p(1);
-b=p(2);
-yfit =  m.* xrange + b;
-ypred = (m.*xes + b);
-yresid = yes - ypred;
-SSresid = sum(yresid.^2);
-SStotal = (length(yes)-1) * var(yes);
-RSQ = 1 - SSresid/SStotal;
-% plot fit with CI
-hold on;
-plot(xrange,Y,'c-','Color',col);
-plot(xrange,Y-DELTA,'r--','Color',col);
-plot(xrange,Y+DELTA,'r--','Color',col);
-hold off;
-% standard error calculation
-SSxx = sum(xes.^2)-n*mean(xes)^2;
-SSyy = sum(yes.^2)-n*mean(yes)^2;
-SSxy = sum(xes.*yes)-n*mean(xes)*mean(yes);
-s=sqrt((SSyy-m*SSxy)/(n-2));
-SE_m = s/sqrt(SSxx); % standard error for slope
-SE_b = s*sqrt((1/n)+mean(xes)^2/SSxx); % standard error for intercept
-% determine t statistic
-step = 0.01;
-t=step;
-cum=0;
-while cum < (1-alfa)
-    tes=-t:step:t;
-    tmp=tpdf(tes,df);
-    cum=sum(tmp)*step;
-    if cum > 0.95
-        break;
-    else
-        t=t+step;
-    end
-end
-% determine coefficient CIs
-COEFFS = zeros(3,3);
-COEFFS = [m m-SE_m*t m+SE_m*t; b b-SE_b*t b+SE_b*t];
-% set axis values
-minX=min(xrange);
-maxX=max(xrange);
-minY=min(Y-DELTA);
-maxY=max(Y+DELTA);
-axis([minX maxX minY maxY]);
-if info_flg
-    % plot info
-    eqn = ['Fit: y = mx+b = ' num2str(m) 'x + ' num2str(b)];
-    text(minX+0.1*(maxX-minX),minY+0.9*(maxY-minY),eqn,'FontSize',8);
-    mcoeff=['m = ' num2str(m) ' [' num2str(COEFFS(1,2)) ',' num2str(COEFFS(1,3)) ']'];
-    text(minX+0.1*(maxX-minX),minY+0.75*(maxY-minY),mcoeff,'FontSize',8);
-    bcoeff=['b = ' num2str(b) ' [' num2str(COEFFS(2,2)) ',' num2str(COEFFS(2,3)) ']'];
-    text(minX+0.1*(maxX-minX),minY+0.6*(maxY-minY),bcoeff,'FontSize',8);
-end
-
-function PD1_Route_IntrauralKnowles(TDT)
+function PD1_Route_Earphones(TDT)
 % routing for knowles recording (intraural)
 % commands to set up routing in the TDT
 SRATE = 1e6 / TDT.Fs;
@@ -330,12 +281,13 @@ S232('PD1clrsched',TDT.din);
 % sound routing
 s232('PD1specIB',TDT.din,s232('IB',0),s232('DAC',0));
 % recording
-s232('PD1specOB',TDT.din,s232('OB',0),s232('ADC',0));
+for(j=0:(TDT.nRecChannels-1))
+    s232('PD1specOB',TDT.din,s232('OB',j),s232('ADC',j));
+end
 % LED thresholds
 S232('PD1setIO',TDT.din,0.01,9.99,0.01,9.99);
 
-function load_HRTF_coefs(HRTF)
-global C TDT
+function load_HRTF_coefs(HRTF,TDT)
 % opmode parameters
 MONO=1;
 STEREO=2;
@@ -351,8 +303,8 @@ s232('dropall');
 % idle ALL dsps
 S232('PD1idleDSP',TDT.din,hex2dec('0FFFFFFF'));
 % load left/right coefs to DSP
-s232('pushf',HRTF.TestL,C.HRTF_nlines);
+s232('pushf',HRTF.left,HRTF.nlines);
 s232('PreLoadRaw',TDT.din,s232('DSPid',0),MONO,STACK,[],[],1,1,1);
-s232('pushf',HRTF.TestR,C.HRTF_nlines);
+s232('pushf',HRTF.right,HRTF.nlines);
 s232('PreLoadRaw',TDT.din,s232('DSPid',1),MONO,STACK,[],[],1,1,1);
     

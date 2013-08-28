@@ -7,7 +7,8 @@ KNOWLES = struct(...
     'Fs',30000,...
     'duration',5,...
     'ramp',5,...
-    'attens',[25 20 15 10 5],...
+    'rms',0.1,...
+    'attens',30:-5:10,...
     'scales',3000:3000:30000,...
     'data_path','',...
     'filename',[]);
@@ -24,7 +25,7 @@ KNOWLES.data_path=data_path;
 c=clock;
 KNOWLES.filename=['knowles_calib_' num2str(c(1)) '_' num2str(c(2)) '_' num2str(c(3)) '_A'];
 count = double('A'+0);
-while exist ([KNOWLES.filename '.mat'],'file');
+while exist ([KNOWLES.data_path KNOWLES.filename '.mat'],'file');
     count = count + 1;
     if count > 90
         disp('There are already several files with similar names!');
@@ -38,6 +39,8 @@ end
 [X,Xtime] = whnoise(KNOWLES.minfreq,KNOWLES.maxfreq,KNOWLES.Fs,KNOWLES.duration);
 KNOWLES.buf_pts = length(Xtime);
 test=Xtime;
+rms = sqrt(mean(test.^2));
+test=(KNOWLES.rms/rms).*test;
 % ramp the test sound (eliminates speaker popping)
 % SOUNDS_ramp should be in ms
 ramp_pts = ceil(KNOWLES.Fs*(KNOWLES.ramp/1000));
@@ -46,7 +49,6 @@ rampenv = [0:(1/ramp_pts):1 ones(1,npts) 1:-(1/ramp_pts):0];
 test = test' .* rampenv;
 % store test sound:
 KNOWLES.test = test;
-
 % INITIALIZE TDT
 % initialize all SystemII hardware
 if(S232('S2init',0,'INIT_PRIMARY',1000)==0)
@@ -177,7 +179,7 @@ uiwait(hMsg);
 hCnt=figure; axis off;
 for secs=cntdwn:-1:0
     hTxt=text(.5,.5,['Next test in: ' num2str(secs) ' seconds!'],'HorizontalAlignment','center','FontSize',30);
-    pause(1)
+    pause(1);
     delete(hTxt);
 end
 close(hCnt)
@@ -191,7 +193,7 @@ KNOWLES.scales=[];
 KNOWLES.voltages=[];
 KNOWLES.spls=[];
 num_trials=length(attens)*length(scalez);
-prog=0;
+prog=0; left_rms=[]; right_rms=[];
 for hh=1:length(attens)
     cnt=0; spls=[]; voltages=[];
     % set attens
@@ -232,9 +234,9 @@ for hh=1:length(attens)
         left_tmp = left_tmp - mean(left_tmp);
         right_tmp = right_tmp - mean(right_tmp);
         % calculate rms voltages
-        left_rms = sqrt(sum(left_tmp.^2)./length(left_tmp));
-        right_rms = sqrt(sum(right_tmp.^2)./length(right_tmp));
-        avg_rms = (left_rms + right_rms)/2;
+        left_rms(end+1) = sqrt(sum(left_tmp.^2)./length(left_tmp));
+        right_rms(end+1) = sqrt(sum(right_tmp.^2)./length(right_tmp));
+        avg_rms = (left_rms(end) + right_rms(end))/2;
         voltages(ii)=avg_rms;
         def{cnt}='';
         prompt{cnt}=['Trial #' num2str(prog)];
@@ -309,12 +311,12 @@ yes=KNOWLES.voltages;
 xind = (max(xes)-min(xes))/100;
 xrange = min(xes):xind:max(xes);
 beta0=[.05 .2 min(yes)]; % ballpark guess of coefficients for exponential fit
-[KNOWLES.rsquared, KNOWLES.coeffs] = regress_stats_exponential(xes,yes,a,xrange,colr,beta0);
+[KNOWLES.rsquared, KNOWLES.coefs] = regress_stats_exponential(xes,yes,a,xrange,colr,beta0);
 ax_lead = gca; set(ax_lead,'XColor',colr,'YColor',colr);
 % title string
 title_string{1} = ['Binaural Mean RMS Voltage vs. Decibels (SPL)'];
 title_string{2} = ['RSQ = ' num2str(KNOWLES.rsquared)];
-title_string{3} = ['RMS Voltage = ' num2str(KNOWLES.coeffs(1)) '*' 'e^{SPL*' num2str(KNOWLES.coeffs(2)) '} + ' num2str(KNOWLES.coeffs(3))];
+title_string{3} = ['RMS Voltage = ' num2str(KNOWLES.coefs(1)) '*' 'e^{SPL*' num2str(KNOWLES.coefs(2)) '} + ' num2str(KNOWLES.coefs(3))];
 title(title_string,'FontSize',8);
 % axes labels
 xlabel('Level (dB SPL)','FontSize',8);
@@ -322,6 +324,7 @@ ylabel('RMS Voltage (averaged across mics)','FontSize',8);
 axis tight
 hold off;
 set(gcf,'InvertHardcopy','off');
+
 fname = [KNOWLES.data_path KNOWLES.filename '_regressfit'];
 saveas(hKnowles,fname,'fig');
 
