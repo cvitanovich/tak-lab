@@ -16,7 +16,7 @@ KNOWLES = struct(...
 if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
 else
-    data_path='C:\andrew\data\calib\';
+    data_path='E:\andrew\data\calib\';
 end
 
 KNOWLES.data_path=data_path;

@@ -1,18 +1,26 @@
 %% main script to calibrate for spatial PDR (depends on calib_sound.m)
 %% should calibrate knowles mics and spl meter beforehand
 
+% refresh
+clear all; close all;
+
 %% PARAMETERS:
 % note: microphones should also be calibrated for SPL vs. Voltage on the same day
-C.data_path='C:\andrew\data\calib\';
+C.data_path='E:\andrew\data\calib\';
 C.scales=300:300:32700; % range of scales to try
 C.stim_Fs=30000;
 C.buf_pts=15000; % 0.5 sec sounds
 C.stim_dur = C.buf_pts/C.stim_Fs;
+C.bird_id = 925;
 
 % HRTF coefficients file:
-HRTF.fname='1073AC_eq_ABLequal.mat'; % what file to use for HRTFs???
+HRTF.fname='925AD_eq_ABLequal.mat'; % what file to use for HRTFs???
 HRTF.nlines=255;
-HRTF.directory='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\main\HRTFs\Matlab_V6\';
+HRTF.directory='C:\andrew\code\tak-lab\main\HRTFs\Matlab_V6\';
+
+% check bird/HRTF file
+btn=questdlg(['Using ' HRTF.fname ' with bird #' num2str(C.bird_id) ', okay?'],'Checkpoint','YES','NO','YES');
+if(strcmp(btn,'NO')); return; end;
 
 % sounds
 C.sounds = {'BBN','GTONE','OCTAVE'};
@@ -29,10 +37,18 @@ yr=num2str(c(1)); yr=yr(end-1:end);
 mo=num2str(c(2)); day=num2str(c(3));
 
 % make a folder for these calibrations
-C.data_path=[C.data_path yr mo day];
-if(~exist(C.data_path,'dir'))
-    mkdir(C.data_path);
+parent_dir=C.data_path;
+new_dir = ['calib' yr mo day];
+if(~exist([parent_dir new_dir],'dir'))
+    [SUCCESS,MESSAGE,MESSAGEID] = mkdir(parent_dir,new_dir);
+else
+    SUCCESS=1;
 end
+if(~SUCCESS)
+    hWarn=warndlg(['FAILURE! ' MESSAGE]);
+    return;
+end
+C.data_path=[parent_dir new_dir '\'];
 disp(['Data will be saved in: ' C.data_path]);
 
 %% LOAD HRTF COEFFICIENTS:
@@ -118,32 +134,41 @@ while(~ok)
 end
 C.GTONE_sound = rampMySound(C.GTONE_sound,C.ramp, C.stim_Fs);
 
-C.attens=10:5:40; % range of attenuations to try for speaker
+CHOICE=questdlg('What is your wish?', ...
+    'Select Calib Type', ...
+    'Freefield/No Bird','Intraural/Speakers','Intraural/Earphones','Freefield/No Bird');
 
-if(0)
-%% NO BIRD, JUST SPEAKER AND KNOWLES
-h=warndlg('Prepare for freefield calib with speaker.','warning'); uiwait(h);
-C.HRTFs=0; C.EPHONES=0; C.SPEAKERS=1;
-% mic_type = Knowles or SPL meter
-C.MIC_TYPE='Knowles';
-C.CALIB_TYPE='Freefield';
-C=calib_sound(C);
-
-
-%% CALIBRATE INTRAURALLY, USING SPEAKERS
-h=warndlg('Prepare for intraural calib with speaker.','warning'); uiwait(h);
-C.HRTFs=0; C.EPHONES=0; C.SPEAKERS=1;
-% mic_type = Knowles or SPL meter
-C.MIC_TYPE='Knowles';
-C.CALIB_TYPE='Intraural';
-C=calib_sound(C);
+switch CHOICE
+    case 'Freefield/No Bird'
+        %% NO BIRD, JUST SPEAKER AND KNOWLES
+        C.attens=10:5:40; % range of attenuations to try for speaker
+        h=warndlg('Prepare for freefield calib with speaker.','warning'); uiwait(h);
+        C.HRTFs=0; C.EPHONES=0; C.SPEAKERS=1; 
+        C.BIRD=0; % flag for bird present
+        % mic_type = Knowles or SPL meter
+        C.MIC_TYPE='Knowles';
+        C.CALIB_TYPE='Freefield';
+        C=calib_sound(C);
+    case 'Intraural/Speakers'
+        %% CALIBRATE INTRAURALLY, USING SPEAKERS
+        C.attens=10:5:40; % range of attenuations to try for speaker
+        h=warndlg('Prepare for intraural calib with speaker.','warning'); uiwait(h);
+        C.HRTFs=0; C.EPHONES=0; C.SPEAKERS=1; 
+        C.BIRD=1; % flag for bird present
+        % mic_type = Knowles or SPL meter
+        C.MIC_TYPE='Knowles';
+        C.CALIB_TYPE='Intraural';
+        C=calib_sound(C);
+    case 'Intraural/Earphones'
+        %% CALIBRATE INTRAURALLY, USING HEADPHONES & HRTFs
+        C.attens=20:5:50; % range of attenuations to try for ephones
+        h=warndlg('Prepare for intraural calib with ephones.','warning'); uiwait(h);
+        C.HRTFs=1; C.EPHONES=1; C.SPEAKERS=0;
+        C.BIRD=1; % flag for bird present
+        % mic_type = Knowles or SPL meter
+        C.MIC_TYPE='Knowles';
+        C.CALIB_TYPE='Intraural';
+        C=calib_sound(C,HRTF);
+    otherwise
+        hWarn=warndlg('Invalid Option!');
 end
-
-%% CALIBRATE INTRAURALLY, USING HEADPHONES & HRTFs
-C.attens=20:5:50; % range of attenuations to try for ephones
-h=warndlg('Prepare for intraural calib with ephones.','warning'); uiwait(h);
-C.HRTFs=1; C.EPHONES=1; C.SPEAKERS=0;
-% mic_type = Knowles or SPL meter
-C.MIC_TYPE='Knowles';
-C.CALIB_TYPE='Intraural';
-C=calib_sound(C,HRTF);

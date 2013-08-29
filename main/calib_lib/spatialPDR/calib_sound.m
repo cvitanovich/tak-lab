@@ -1,18 +1,18 @@
-function C=calib_sound(C,HRTF)
+function C = calib_sound(C,HRTF)
 %% CHECK POINT
 if strcmp(C.MIC_TYPE,'Knowles')
-    h=warndlg({'USING KNOWLES MICS FOR INTRAURAL CALIBRATIONS','CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???'},'warning');
-    uiwait(h);
+    btn=questdlg({'USING KNOWLES MICS FOR INTRAURAL CALIBRATIONS','CHANNEL 0 = LEFT EAR, CHANNEL 1 = RIGHT EAR ... OKAY???'},'Checkpoint','YES','NO','YES');
+    if(strcmp(btn,'NO')); return; end;
 else
-    h=warndlg('Calibrating speaker output with a single mic (SPL Meter?)... OKAY???','warning');
-    uiwait(h);
+    btn=questdlg('Calibrating speaker output with a single mic (SPL Meter?)... OKAY???','Checkpoint','YES','NO','YES');
+    if(strcmp(btn,'NO')); return; end;
 end
 if(C.EPHONES)
-    h=warndlg('Using earphones, not speaker, okay?','warning');
-    uiwait(h);
+    btn=questdlg('Using earphones, NOT speaker, okay?','Checkpoint','YES','NO','YES');
+    if(strcmp(btn,'NO')); return; end;
 else
-    h=warndlg('Using speaker, okay?','warning');
-    uiwait(h);
+    btn=questdlg('Using speaker, okay?','Checkpoint','YES','NO','YES');
+    if(strcmp(btn,'NO')); return; end;
 end
 
 %% INITIALIZE TDT:
@@ -87,12 +87,19 @@ c=clock; c=round(c);
 yr=num2str(c(1)); yr=yr(end-1:end);
 mo=num2str(c(2)); day=num2str(c(3));
 
+% data save path
+cd(C.data_path);
+
 for j=1:length(C.sounds)
     % sound type
     current_snd=C.sounds{j};
     
     % filename
-    C.filename=['Calib' C.CALIB_TYPE C.MIC_TYPE];
+    if(C.BIRD)
+        C.filename = ['Calib_bird' num2str(C.bird_id) '_' C.CALIB_TYPE C.MIC_TYPE];
+    else
+        C.filename = ['Calib_nobird_' C.CALIB_TYPE C.MIC_TYPE];
+    end
     if(C.HRTFs)
         C.filename=[C.filename '_HRTFs'];
     end
@@ -131,13 +138,13 @@ for j=1:length(C.sounds)
     fname=[C.data_path C.filename 'A'];
     count = double('A'+0);
     while exist ([fname '.txt'],'file');
-    count = count + 1;
+        count = count + 1;
         if count > 90
             disp('There are already several files with similar names!');
             fname = input('Enter a unique filename for this data file: ', 's');
             break;
         else
-        fname(end) = char(count);
+            fname(end) = char(count);
         end
     end
     fid = fopen([fname '.txt'],'w');
@@ -160,7 +167,7 @@ end
 %% SUBROUTINES
 function rms = test_scales(C,TDT,scales,current_snd0,current_snd1)
 % filename for saving voltage trace
-FNAME=[C.data_path C.filename];
+FNAME=C.filename;
 left_rms=[]; right_rms=[];
 if(nargin>4)
     % two outputs (headphones)
@@ -239,7 +246,7 @@ for j=1:length(scales)
         tmp = tmp - mean(tmp);
         rms(j)=sqrt(mean(tmp.^2));
     end 
-	waitbar(j/length(scales),hWait);
+    waitbar(j/length(scales),hWait);
 end
 close(hWait);
 
@@ -307,4 +314,3 @@ s232('pushf',HRTF.left,HRTF.nlines);
 s232('PreLoadRaw',TDT.din,s232('DSPid',0),MONO,STACK,[],[],1,1,1);
 s232('pushf',HRTF.right,HRTF.nlines);
 s232('PreLoadRaw',TDT.din,s232('DSPid',1),MONO,STACK,[],[],1,1,1);
-    
