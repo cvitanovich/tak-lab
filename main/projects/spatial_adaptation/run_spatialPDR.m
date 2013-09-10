@@ -108,7 +108,7 @@ q=clock;
 y=num2str(q(1));y=y(3:4);
 m=num2str(q(2));if size(m,2)<2;m=['0' m];end
 d=num2str(q(3));if size(d,2)<2;d=['0' d];end
-keyboard
+
 PDR.filename = [y m d '_' num2str(PDR.bird_id) 'a'];
 
 PDR.npts_totalplay = PDR.ntrials*(PDR.isi_buf+1)*PDR.buf_pts; % Calculate length of session!
