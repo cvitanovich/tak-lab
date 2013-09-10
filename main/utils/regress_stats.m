@@ -5,7 +5,6 @@ df=length(yes)-2;
 for j = 1:n
     plot(xes,yes,'m*');
 end
-
 % determine fit coefficients and CI
 [p, S] = polyfit(xes,yes,1);
 [Y,DELTA]=polyconf(p,xrange,S,alfa);

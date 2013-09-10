@@ -59,24 +59,25 @@ end
 
 global PDR HRTF session
 
-setDefaults_spatialPDR; % sets default values for running a session
+setDefaults_SpatialPDR; % sets default values for running a session
 
 % load calibration files and calculate scales
 load([PDR.CALIB_directory PDR.CALIB_fname]);
-eval(['mAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(1,1);']);
-eval(['bAdapt=CALIB_PDR.' PDR.ADAPT_soundtype '_COEFS(2,1);']);
-eval(['mTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(1,1);']);
-eval(['bTest=CALIB_PDR.' PDR.TEST_soundtype '_COEFS(2,1);']);
-atten=50; check=0; cnt=0;
-ALL_TEST_SPLs=[ ];
+eval(['mAdapt=CALIB.Bird' num2str(PDR.bird_id) '.EPHONES.' PDR.ADAPT_soundtype '(1);']);
+eval(['bAdapt=CALIB.Bird' num2str(PDR.bird_id) '.EPHONES.' PDR.ADAPT_soundtype '(2);']);
+eval(['mTest=CALIB.Bird' num2str(PDR.bird_id) '.EPHONES.' PDR.TEST_soundtype '(1);']);
+eval(['bTest=CALIB.Bird' num2str(PDR.bird_id) '.EPHONES.' PDR.TEST_soundtype '(2);']);
+eval(['gain_Test=CALIB.Bird' num2str(PDR.bird_id) '.GAIN.' PDR.TEST_soundtype ';']);
+eval(['gain_Adapt=CALIB.Bird' num2str(PDR.bird_id) '.GAIN.' PDR.ADAPT_soundtype ';']);
+atten=100; check=0; cnt=0;
 while(check==0)
     if(PDR.flag_adapt>0)
-        PDR.ADAPT_scale=round(10^((PDR.ADAPT_SPL-bAdapt+atten)/mAdapt));
+        PDR.ADAPT_scale=round(exp((PDR.ADAPT_SPL+gain_Adapt-bAdapt+atten)/mAdapt));
     else
         PDR.ADAPT_scale=[];
     end
-    test_scales=round(10.^((PDR.TEST_SPLs-bTest+atten)./mTest));
-    test_outlier_scales=round(10.^((PDR.TEST_outlier_SPLs-bTest+atten)./mTest));
+    test_scales=round(exp((PDR.TEST_SPLs+gain_Test-bTest+atten)./mTest));
+    test_outlier_scales=round(exp((PDR.TEST_outlier_SPLs+gain_Test-bTest+atten)./mTest));
     scales=[PDR.ADAPT_scale test_scales test_outlier_scales];
     if(max(scales)>32760)
         atten=atten-0.1; % increase atten
@@ -86,7 +87,7 @@ while(check==0)
         check=1;
     end
     cnt=cnt+1;
-    if((cnt>1E4) || atten<0 || atten>75)
+    if((cnt>1E4) || atten<0 || atten>100)
         hWarn=warndlg('Could not find a suitable attenuation for the levels desired!');
         uiwait(hWarn);
         return
@@ -107,7 +108,7 @@ q=clock;
 y=num2str(q(1));y=y(3:4);
 m=num2str(q(2));if size(m,2)<2;m=['0' m];end
 d=num2str(q(3));if size(d,2)<2;d=['0' d];end
-
+keyboard
 PDR.filename = [y m d '_' num2str(PDR.bird_id) 'a'];
 
 PDR.npts_totalplay = PDR.ntrials*(PDR.isi_buf+1)*PDR.buf_pts; % Calculate length of session!

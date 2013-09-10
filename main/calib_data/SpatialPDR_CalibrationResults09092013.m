@@ -1,0 +1,27 @@
+% bird 1073 calibration results
+
+% intraural gains:
+CALIB.Bird1073.GAIN.BBN=10.4398;
+CALIB.Bird1073.GAIN.GTONE=3.264;
+CALIB.Bird1073.GAIN.OCTAVE=7.2655;
+
+% coefficients for earphone (intraural) SPL:
+CALIB.Bird1073.EPHONES.BBN=[6.3671 0.97364];
+CALIB.Bird1073.EPHONES.GTONE=[6.1753 1.5551];
+CALIB.Bird1073.EPHONES.OCTAVE=[6.461 -0.14597];
+
+% bird 925 calibration results
+
+% intraural gains:
+CALIB.Bird925.GAIN.BBN=11.0645;
+CALIB.Bird925.GAIN.GTONE=5.1555;
+CALIB.Bird925.GAIN.OCTAVE=9.0684;
+
+% coefficients for earphone (intraural) SPL:
+CALIB.Bird925.EPHONES.BBN=[7.7199 -13.3804];
+CALIB.Bird925.EPHONES.GTONE=[7.5501 -11.9053];
+CALIB.Bird925.EPHONES.OCTAVE=[8.2002 -17.3191];
+
+
+
+

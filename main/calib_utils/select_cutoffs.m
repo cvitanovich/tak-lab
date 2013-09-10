@@ -3,7 +3,8 @@ function [lo, hi] = select_cutoffs(xes,yes)
 % for fitting linear portion of data range
 
 hFig=figure;
-scatter(xes,yes);
+plot(xes,yes);
+%scatter(xes,yes);
 prompt = {'Enter Lower Cutoff','Enter Upper Cutoff'};
 dlg_title = 'Input Cutoffs:';
 num_lines = 1;

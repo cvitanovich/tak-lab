@@ -1,25 +1,33 @@
 % SETUP DEFAULTS FOR spatialPDR EXPERIMENT
 
 % select folder location based on computer being used:
-if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
-    code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/spatial_adaptation/';
-    data_path='/Users/cvitanovich/Documents/MATLAB/data/';
-    hrtf_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/HRTFs/Matlab_V6/';
-    calib_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/calib_data/spatial_PDR/';
-else
-    code_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\projects\spatial_adaptation\';
-    data_path='C:\andrew\data\';
-    sounds_path='C:\andrew\sounds\';
-    hrtf_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\HRTFs\Matlab_V6\';
-    calib_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\calib_data\spatial_PDR\';
+if(1)
+    code_path='/home/andrew/code/tak-lab/main/projects/spatial_adaptation/';
+    data_path='/home/andrew/data/';
+    hrtf_path='/home/andrew/code/tak-lab/main/HRTFs/Matlab_V6/';
+    calib_path='/home/andrew/code/tak-lab/main/calib_data/';
+    sounds_path='/home/andrew/sounds/';
 end
+
+% if(~ispc && strcmp(getenv('USER'),'cvitanovich'))
+%     code_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/projects/spatial_adaptation/';
+%     data_path='/Users/cvitanovich/Documents/MATLAB/data/';
+%     hrtf_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/HRTFs/Matlab_V6/';
+%     calib_path='/Users/cvitanovich/Documents/MATLAB/tak-lab/calib_data/spatial_PDR/';
+% else
+%     code_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\projects\spatial_adaptation\';
+%     data_path='C:\andrew\data\';
+%     sounds_path='C:\andrew\sounds\';
+%     hrtf_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\HRTFs\Matlab_V6\';
+%     calib_path='C:\Documents and Settings\andrew\My Documents\GitHub\tak-lab\calib_data\spatial_PDR\';
+% end
     
 PDR = struct(...                            % MAIN PARAMETERS:
     'DEBUG',0,...                           % set to zero unless debugging without TDT!
     'jitter',0,...
     'virtual',1, ...                        % flag for virtual sound presentation
     'record',1, ...                        % flag for recording pupillometer output
-    'flag_adapt',0,...                     % flag for adapting stimulus
+    'flag_adapt',1,...                     % flag for adapting stimulus
     'ntrials',770,...                       % # of trials in session
     'npretrials',100,...                     % # of trials before first test trial
     'n_test_trials',[],...                  % # of test trials 
@@ -48,7 +56,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'ADAPT_soundtype','GTONE',...            % type of sound for adapting stimulus
     'ADAPT_cF',6000,...                     % center frequency (Hz) (if relevant)
     'ADAPT_coefs',[],...                    % FIR coefficients to generate adapting stimulus
-    'ADAPT_SPL',0,...                      % SPL for adaptor
+    'ADAPT_SPL',12,...                      % SPL for adaptor
     'ADAPT_scale',[],...                    % scale for adaptor (calculated using calibration data)
     'ADAPT_ramp',5,...                      % ramp for trial segments
     'ADAPT_dur',[],...                      % adaptor duration in seconds (calculated from isi_buf) in seconds
@@ -67,7 +75,7 @@ PDR = struct(...                            % MAIN PARAMETERS:
     'TEST_trial_freq',15, ...                % test sound every x trials
     'TEST_trial_jitter',5, ...              % maximum jitter in isi_buf
     'TEST_SPLs',[-12 -6 -3 0 3 6],...          % target SPLs for test sounds
-    'TEST_outlier_SPLs',[12 18],...
+    'TEST_outlier_SPLs',[12 18 24],...
     'TEST_n_outliers',7,...
     'TEST_scales',[],...                    % scales (calculated using calibration data)
     'TEST_outlier_scales',[],...
@@ -92,4 +100,5 @@ switch(PDR.bird_id)
         PDR.HRTF_fname='925AD_eq_ABLequal_normed.mat';
         PDR.CALIB_fname='intraural_calib_201358_925S.mat';
 end
+PDR.CALIB_fname='CalibResults09092013.mat';
 
