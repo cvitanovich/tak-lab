@@ -24,7 +24,7 @@ mag(minfreq:maxfreq) = ones(range,1);
 % random phase spectrum between set frequencies:
 			%-0.5 moves phases from 0to1 range to -0.5to0.5 range, then have to multiply by 2pi instead of pi
 % combine phase and magnitude:
-X = mag .* ( (cos(phase)) + (i .* sin(phase)) );
+X = mag .* ( (cos(phase)) + (1i .* sin(phase)) );
 
 % convert to time domain:
 Xtime = real(ifft(X));

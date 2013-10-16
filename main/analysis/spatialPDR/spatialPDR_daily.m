@@ -19,14 +19,21 @@ try
     compID=getenv('USER');
 end
 
-if(strcmp('cvitanovich',compID)) % my macbook
-    code_dir='/Users/cvitanovich/Documents/MATLAB/tak-lab/analysis/LDS_PDR/';
-    data_dir='/Users/cvitanovich/Desktop/alex_data/';
-    analysis_dir='/Users/cvitanovich/Documents/MATLAB/analysis_data/';
-elseif(strcmp('andrew',compID)) % linux desktop (Arch)
-    %code_dir='/home/andrew/science/Alex/LDS_Project/analysis/code';
-    data_dir='/home/andrew/science/data/projects/AdaptProject/';
-    analysis_dir='/home/andrew/science/analysis/projects/AdaptProject/';
+% get hostname of system
+[~, hname] = system('hostname');
+
+if(strcmp('cvit-macbook',hname(1:12)))
+    code_dir='/home/andrew/code/tak-lab/main/analysis/spatialPDR/';
+    data_dir='/home/andrew/data/';
+    analysis_dir='home/andrew/analysis_data/';
+% elseif(strcmp('cvitanovich',compID)) % my macbook
+%     code_dir='/Users/cvitanovich/Documents/MATLAB/tak-lab/analysis/LDS_PDR/';
+%     data_dir='/Users/cvitanovich/Desktop/alex_data/';
+%     analysis_dir='/Users/cvitanovich/Documents/MATLAB/analysis_data/';
+% elseif(strcmp('andrew',compID)) % linux desktop (Arch)
+%     %code_dir='/home/andrew/science/Alex/LDS_Project/analysis/code';
+%     data_dir='/home/andrew/science/data/projects/AdaptProject/';
+%     analysis_dir='/home/andrew/science/analysis/projects/AdaptProject/';
 else
     disp('figure out your paths!')
 end
@@ -41,8 +48,8 @@ end
 
 A.analysis_dir = analysis_dir;
 
-cd (A.pname)
-load(A.fname)
+%cd (A.pname)
+load([A.pname A.fname]);
 
 A.TEST_level_sequence=-Inf.*ones(1,length(PDR.TEST_scale_sequence));
 SCALE_list=[PDR.TEST_scales PDR.TEST_outlier_scales];
