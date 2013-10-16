@@ -1,8 +1,9 @@
-% lds daily analysis
+% spatialPDR daily analysis
 clear all;
 global A
 A.pflag = 0; %print flag (set to 1 to print figures)
-A.sflag = 0; %save flag (set to 1 to save figures)
+A.sflag = 1; %save flag (set to 1 to save figures)
+A.infopts = 1;
 
 button = questdlg('Virtual or Freefield? ','Select Expt Type','Virtual','Freefield','Virtual');
 if(strcmp(button,'Virtual'))
@@ -25,7 +26,7 @@ end
 if(strcmp('cvit-macbook',hname(1:12)))
     code_dir='/home/andrew/code/tak-lab/main/analysis/spatialPDR/';
     data_dir='/home/andrew/data/';
-    analysis_dir='home/andrew/analysis_data/';
+    analysis_dir='/home/andrew/analysis_data/';
 % elseif(strcmp('cvitanovich',compID)) % my macbook
 %     code_dir='/Users/cvitanovich/Documents/MATLAB/tak-lab/analysis/LDS_PDR/';
 %     data_dir='/Users/cvitanovich/Desktop/alex_data/';
@@ -51,23 +52,25 @@ A.analysis_dir = analysis_dir;
 %cd (A.pname)
 load([A.pname A.fname]);
 
-A.TEST_level_sequence=-Inf.*ones(1,length(PDR.TEST_scale_sequence));
-SCALE_list=[PDR.TEST_scales PDR.TEST_outlier_scales];
-SPL_list=[PDR.TEST_SPLs PDR.TEST_outlier_SPLs];
+
+A.SCALE_list=[PDR.TEST_scales PDR.TEST_outlier_scales];
+A.SPL_list=[PDR.TEST_SPLs PDR.TEST_outlier_SPLs];
 tmp=find(PDR.TEST_scale_sequence~=0);
+A.TEST_level_sequence=-Inf.*ones(1,length(tmp));
 for(j=1:length(tmp))
    % find matching SPL for each scale
-   A.TEST_level_sequence(tmp(j)) = SPL_list( find( SCALE_list==PDR.TEST_scale_sequence(tmp(j)) ) );
+   A.TEST_level_sequence(tmp(j)) = A.SPL_list( find( A.SCALE_list==PDR.TEST_scale_sequence(tmp(j)) ) );
 end
 
 % if ~isempty(code_dir)
 %     A.DATApath = code_dir;
 % end
-% for tID=1:length(PDR.TEST_azimuths)
-%     A.test_info{tID} = num2str(PDR.TEST_azimuths(tID));
-% end
+for tID=1:length(A.SPL_list)
+    A.test_info{tID} = num2str(A.SPL_list(tID));
+end
 A.PDRfile=PDR.filename;
-A.sndStart = TEST_on_delay_pts/size(PDR.LAG_sounds{1},2); % how far through the buffer (fractional) does the sound start
+A.sndStart = PDR.TEST_start_pt/PDR.buf_pts;
+%TEST_on_delay_pts/size(PDR.LAG_sounds{1},2); % how far through the buffer (fractional) does the sound start
 A.dec_Fs = PDR.stim_Fs/2^PDR.decimationfactor; % decimated samp. rate
 A.dec_pts = PDR.buf_pts/2^PDR.decimationfactor; % num buf pts (decimated)
 A.time2integrate = A.dec_Fs*2; % using integration time of 2 sec
@@ -90,7 +93,7 @@ end
 %*******LOAD AND FILTER DATA ***********************
 %***************************************************
 
-lds_func('load_and_filter_data');
+spatialPDR_func('load_and_filter_data');
 
 if length(A.idx2trials) > PDR.ntrials
     PDR.ntrials = length(A.idx2trials);
@@ -100,12 +103,11 @@ end
 %***************************************************
 %*******REMOVE BLINKS ******************************
 %***************************************************
-lds_func('remove_blinks');
+spatialPDR_func('remove_blinks');
 
 if A.sflag
     cd (A.analysis_dir) % move to analysis dir to save figs, data, etc.
 end
-
 
 % MAIN FIGURE SETUP
 
@@ -136,21 +138,27 @@ A.h(5) = subplot(rowz,colz,[78:80 86:88]);
 % Plot PDR magnitudes for all trials
 % Plot Batch averages of hab trials
 
-lds_func('pdr_diagnostic_plots');
+spatialPDR_func('pdr_diagnostic_plots');
 
 %*****************************************************
 % parse trials (and sort zscores, areas, traces, etc.)
 %*****************************************************
-A.habID=find(PDR.SOUNDS_azimuths==PDR.LAG_hab_pos);
-for i0=1:length(PDR.SOUNDS_location_sequence)
-    PDR.trialID(i0)=find(PDR.SOUNDS_location_sequence(2,i0)==PDR.SOUNDS_azimuths);
-end
-if length(PDR.SOUNDS_location_sequence)<PDR.ntrials
-    for i1=(length(PDR.SOUNDS_location_sequence)+1):PDR.ntrials
-        PDR.trialID(i1)=A.habID; % this is a hab trial
+A.habID=-Inf;
+
+for i0=1:length(PDR.TEST_scale_sequence)
+    tmp=find(PDR.TEST_scale_sequence(i0)==A.SCALE_list);
+    if(isempty(tmp))
+        PDR.trialID(i0)=A.habID;
+    else
+        PDR.trialID(i0)=A.SPL_list(tmp(1));
     end
 end
-lds_func('parse_trials');
+% if length(PDR.TEST_scale_sequence)<PDR.ntrials
+%     for i1=(length(PDR.SOUNDS_location_sequence)+1):PDR.ntrials
+%         PDR.trialID(i1)=A.habID; % this is a hab trial
+%     end
+% end
+spatialPDR_func('parse_trials');
 
 
 
@@ -158,10 +166,10 @@ lds_func('parse_trials');
 % plot average traces
 %***************************************************
 subplot(A.h(2));
-lds_func('plot_average_traces');
+spatialPDR_func('plot_average_traces');
 %A.hShade=figure;
 %set(gcf,'Color',[1 1 1],'Position',[.6*A.scrn(3) .04*A.scrn(4) .40*A.scrn(3) .9*A.scrn(4)]);
-%lds_func('plot_stdshade_avg_traces');
+%spatialPDR_func('plot_stdshade_avg_traces');
 
 figure(A.hFig);
 
@@ -174,21 +182,21 @@ else % there were test trials
     % plot zscores and fit a line
     %***************************************************
     subplot(A.h(4));
-    lds_func('plot_zscores');
+    spatialPDR_func('plot_zscores');
     grid on;
 
-    if(0)
+    if(1)
     %***************************************************
     % roc analysis
     %***************************************************
     A.rocfig= figure('Name','ROC Plots','NumberTitle','off');
     set(A.rocfig, 'Position', [0.15 0.15 0.4*A.scrn(3) 0.8*A.scrn(4) ]);
     hold on;
-    A.loc=NaN*ones(length(A.trials.types),1);
+    A.spls=NaN*ones(length(A.trials.types),1);
     A.total_tests=length(A.trials.types);
     for i = 1:length(A.trials.types)
-        lds_func('roc_PERFCURVE',i);
-        A.loc(i) = str2num(A.trials.test{i}.loc);
+        spatialPDR_func('roc_PERFCURVE',i);
+        A.spls(i) = str2num(A.trials.test{i}.spl);
     end
     %whitebg(gcf,[.5 .5 .5])
     %legend(A.test_info,'Location','Best')
@@ -201,12 +209,12 @@ else % there were test trials
     %hROC_summary = figure('Name','ROC Summary','NumberTitle','off'); 
     %set(gcf, 'Position', [0 0 A.scrn(3) A.scrn(4) ]);
     figure(A.hFig); subplot(A.h(5));
-    plot(A.loc,A.pc,'s','MarkerSize',12,'MarkerFaceColor',[0 0 1],'MarkerEdgeColor',[0 0 1]);
+    plot(A.spls,A.pc,'s','MarkerSize',12,'MarkerFaceColor',[0 0 1],'MarkerEdgeColor',[0 0 1]);
     hold on;
     %errorbar(corrs,pc,upperCI-pc,lowerCI-pc); DON'T PLOT ERROR BARS
     % TOO FEW TRIALS TO PLOT ERROR BARS
 
-    xlabel('Locations'); ylabel('Percent Correct');
+    xlabel('SPLs'); ylabel('Percent Correct');
     %axis([-5 100 0 1]);
     title(['Summary Plot of ROC Analysis']);
     end
@@ -231,6 +239,6 @@ if A.sflag
     %saveas(A.hFig,[A.fname(1:end-4) '_analysis.fig']);
     %saveas(A.hFig,[A.fname(1:end-4) '_analysis.png']);
     anal_fname=[A.PDRfile '_ANALYSIS.mat'];
-    save(anal_fname,'A');
+    save([A.analysis_dir anal_fname],'A');
 end
 cd(current_dir);
